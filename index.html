@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tae's Code Sandbox - Dev Playground</title>
+  
+  <!-- Tailwind CSS via Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Early Theme Initialization (Defaults to Light) -->
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+  
+  <!-- Tailwind Theme Custom Config -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brandDark: '#080c14',
+            panelDark: 'rgba(17, 24, 39, 0.7)',
+            neonCyan: '#00f2fe',
+            neonPurple: '#4facfe',
+            neonPink: '#ff0844',
+            accentGreen: '#39ff14',
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f8fafc;
+      /* Glowing background gradients and developer grid pattern for Light Mode */
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.06) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(244, 63, 94, 0.04) 0px, transparent 50%),
+        linear-gradient(rgba(15, 23, 42, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15, 23, 42, 0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+      min-height: 100vh;
+      transition: background-color 0.3s ease, background-image 0.3s ease;
+    }
+
+    .dark body {
+      background-color: #060910;
+      /* Glowing background gradients and developer grid pattern for Dark Mode */
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(244, 63, 94, 0.12) 0px, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.007) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.007) 1px, transparent 1px);
+    }
+
+    .neon-glow-cyan {
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+    }
+    
+    .neon-glow-pink {
+      box-shadow: 0 0 15px rgba(255, 8, 68, 0.2);
+    }
+
+    /* Glass card styled for light theme by default */
+    .glass-card {
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: rgba(255, 255, 255, 0.7);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    }
+
+    .glass-card:hover {
+      border-color: rgba(79, 70, 229, 0.3);
+      box-shadow: 0 10px 30px -10px rgba(79, 70, 229, 0.15), 0 0 1px 1px rgba(79, 70, 229, 0.2);
+    }
+
+    /* Glass card styled for dark theme */
+    .dark .glass-card {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(13, 18, 30, 0.7);
+    }
+
+    .dark .glass-card:hover {
+      border-color: rgba(0, 242, 254, 0.35);
+      box-shadow: 0 10px 30px -10px rgba(0, 242, 254, 0.15), 0 0 1px 1px rgba(0, 242, 254, 0.2);
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      transition: background-color 0.3s ease;
+    }
+    .dark ::-webkit-scrollbar-track {
+      background: #080c14;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #1f2937;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: #374151;
+    }
+  </style>
+</head>
+<body class="text-slate-800 dark:text-gray-100 flex flex-col justify-between transition-colors duration-300">
+
+  <!-- Main Container -->
+  <div class="w-full max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 flex-grow">
+    
+    <!-- Top System Bar -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 dark:border-gray-800 pb-4 mb-8 gap-3 transition-colors duration-300">
+      <div class="flex items-center gap-3 font-mono text-xs tracking-wider text-slate-500 dark:text-gray-500">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>SYSTEM STATUS: <span class="text-emerald-600 dark:text-emerald-400">ACTIVE</span></span>
+        <span class="text-slate-300 dark:text-gray-700">|</span>
+        <span>SANDBOX ENV v1.0.4</span>
+      </div>
+      <!-- Theme Toggle & Social Links -->
+      <div class="flex items-center gap-4 text-sm">
+        <!-- Theme Toggle Button -->
+        <button 
+          id="theme-toggle" 
+          type="button" 
+          aria-label="Toggle Theme"
+          class="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 text-slate-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-neonCyan shadow-sm hover:shadow dark:shadow-none transition-all duration-300"
+        >
+          <!-- Sun Icon (visible in Dark Mode) -->
+          <i id="theme-toggle-light-icon" class="fas fa-sun text-sm hidden"></i>
+          <!-- Moon Icon (visible in Light Mode) -->
+          <i id="theme-toggle-dark-icon" class="fas fa-moon text-sm hidden"></i>
+        </button>
+
+        <div class="h-4 w-px bg-slate-200 dark:bg-gray-800"></div>
+
+        <div class="flex gap-4 text-slate-400 dark:text-gray-400">
+          <a href="#" class="hover:text-indigo-600 dark:hover:text-neonCyan transition-all duration-300 transform hover:scale-110"><i class="fab fa-github fa-lg"></i></a>
+          <a href="#" class="hover:text-indigo-600 dark:hover:text-neonCyan transition-all duration-300 transform hover:scale-110"><i class="fab fa-twitter fa-lg"></i></a>
+          <a href="#" class="hover:text-indigo-600 dark:hover:text-neonCyan transition-all duration-300 transform hover:scale-110"><i class="fas fa-globe fa-lg"></i></a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header Block -->
+    <header class="mb-12">
+      <div class="relative inline-block mb-3">
+        <span class="absolute -inset-1 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-neonCyan dark:to-neonPurple opacity-20 dark:opacity-35 blur"></span>
+        <span class="relative font-mono text-xs text-indigo-600 dark:text-neonCyan bg-white dark:bg-gray-900/90 px-3 py-1.5 rounded-md border border-indigo-100 dark:border-neonCyan/30 uppercase tracking-widest">
+          Developer Playground
+        </span>
+      </div>
+      
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-800 to-slate-650 dark:from-white dark:via-gray-100 dark:to-gray-400 mb-4 mt-2">
+        TAE'S CODE SANDBOX
+      </h1>
+      
+      <p class="text-slate-600 dark:text-gray-400 max-w-3xl text-base sm:text-lg leading-relaxed mb-8">
+        คลังแสงสำหรับรวบรวมมินิโปรเจกต์ โค้ดทดลองเล่น และ UI Components 
+        ที่เขียนขึ้นด้วยโครงสร้าง HTML, Tailwind CSS และ Vanilla JavaScript ดิบ ๆ เพื่อเป็นพื้นที่สำหรับทดสอบไอเดีย พัฒนาฝีมือ และท้าทายจินตนาการ
+      </p>
+
+      <!-- Sandbox Stats Panel -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl">
+        <div class="bg-white/70 dark:bg-gray-950/65 border border-slate-200/80 dark:border-gray-800/80 rounded-xl p-4 flex items-center gap-4 transition-all duration-300">
+          <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-neonCyan/10 border border-indigo-100 dark:border-neonCyan/20 flex items-center justify-center text-indigo-600 dark:text-neonCyan">
+            <i class="fas fa-cubes"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 dark:text-gray-500 font-mono">ALL PROJECTS</div>
+            <div class="text-xl font-bold font-mono text-slate-800 dark:text-white" id="stat-total">0</div>
+          </div>
+        </div>
+
+        <div class="bg-white/70 dark:bg-gray-950/65 border border-slate-200/80 dark:border-gray-800/80 rounded-xl p-4 flex items-center gap-4 transition-all duration-300">
+          <div class="w-10 h-10 rounded-lg bg-pink-50 dark:bg-neonPink/10 border border-pink-100 dark:border-neonPink/20 flex items-center justify-center text-pink-600 dark:text-neonPink">
+            <i class="fas fa-gamepad"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 dark:text-gray-500 font-mono">MINI-GAMES</div>
+            <div class="text-xl font-bold font-mono text-slate-800 dark:text-white" id="stat-games">0</div>
+          </div>
+        </div>
+
+        <div class="bg-white/70 dark:bg-gray-950/65 border border-slate-200/80 dark:border-gray-800/80 rounded-xl p-4 flex items-center gap-4 transition-all duration-300">
+          <div class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-neonPurple/10 border border-purple-100 dark:border-neonPurple/20 flex items-center justify-center text-purple-600 dark:text-neonPurple">
+            <i class="fas fa-window-restore"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 dark:text-gray-500 font-mono">UI ELEMENTS</div>
+            <div class="text-xl font-bold font-mono text-slate-800 dark:text-white" id="stat-ui">0</div>
+          </div>
+        </div>
+
+        <div class="bg-white/70 dark:bg-gray-950/65 border border-slate-200/80 dark:border-gray-800/80 rounded-xl p-4 flex items-center gap-4 transition-all duration-300">
+          <div class="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <i class="fas fa-code-branch"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 dark:text-gray-500 font-mono">EXPERIMENTS</div>
+            <div class="text-xl font-bold font-mono text-slate-800 dark:text-white" id="stat-experiments">0</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Controls: Search & Filter Tabs -->
+    <div class="flex flex-col gap-6 bg-slate-100/50 dark:bg-gray-950/40 p-6 rounded-2xl border border-slate-200 dark:border-gray-850/80 mb-10 transition-colors duration-300">
+      <div class="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
+        <!-- Search bar -->
+        <div class="relative flex-1 max-w-xl">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 dark:text-gray-500 pointer-events-none">
+            <i class="fas fa-search"></i>
+          </span>
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder="ค้นหาชื่อโปรเจกต์ หรือรายละเอียดที่ต้องการ..." 
+            class="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-900/60 border border-slate-200 dark:border-gray-800 rounded-xl focus:outline-none focus:border-indigo-500 dark:focus:border-neonCyan focus:ring-1 focus:ring-indigo-500 dark:focus:ring-neonCyan text-sm placeholder-slate-400 dark:placeholder-gray-500 text-slate-800 dark:text-gray-100 transition-all duration-300"
+          >
+        </div>
+        <!-- Result count badge -->
+        <div class="text-xs font-mono text-slate-500 dark:text-gray-500 self-end lg:self-center">
+          FOUND <span id="results-count" class="text-indigo-600 dark:text-neonCyan font-bold">0</span> RESULTS
+        </div>
+      </div>
+
+      <!-- Categories Filter Tabs -->
+      <div class="flex flex-wrap gap-2" id="filter-tabs-container">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+
+    <!-- Projects Grid Section -->
+    <main class="mb-16">
+      <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Project Cards will be rendered dynamically by JavaScript -->
+      </div>
+      
+      <!-- Empty State View -->
+      <div id="empty-state" class="hidden flex-col items-center justify-center py-16 text-center">
+        <div class="text-neonPink text-4xl mb-4">
+          <i class="fas fa-folder-open"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-1">ไม่พบผลลัพธ์การค้นหา</h3>
+        <p class="text-sm text-gray-500 max-w-md">ลองเปลี่ยนคำค้นหา หรือเลือกตัวกรองหมวดหมู่อื่นเพื่อค้นหาโปรเจกต์ใหม่อีกครั้ง</p>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Footer Block -->
+  <footer class="w-full border-t border-slate-200 dark:border-gray-900 bg-white/80 dark:bg-gray-950/80 py-6 text-center text-xs text-slate-500 dark:text-gray-500 font-mono transition-colors duration-300">
+    <div class="max-w-7xl mx-auto px-4">
+      <p class="mb-1">DESIGNED & SYNTHESIZED BY TAE • © 2026 Sandbox Collect</p>
+      <p class="text-slate-400 dark:text-gray-700">Compiled with Tailwind CSS CDN & HTML5</p>
+    </div>
+  </footer>
+
+  <!-- JavaScript Dynamic Operations -->
+  <script>
+    // -----------------------------------------------------------------
+    // 1. DYNAMIC DATA SOURCE (EDIT OR ADD PROJECTS HERE)
+    // -----------------------------------------------------------------
+    const PROJECTS = [
+      {
+        id: "vampire-survival",
+        title: "Neon Survivors",
+        description: "เกมยิงเอาชีวิตรอดสุดระทึกสไตล์ 2D Top-Down Roguelike บังคับง่ายด้วย WASD พร้อมอาวุธแบบออโต้ 6 ชนิด การเก็บ XP การเปิดหีบอัปเกรด และเสียงสังเคราะห์แบบ 8-bit!",
+        category: "Mini-Game",
+        tags: ["Canvas", "JS", "Retro", "WebAudio"],
+        date: "2026-07-15",
+        url: "./vampiresurvival/index.html",
+        icon: "🧄",
+        featured: true
+      },
+      {
+        id: "neon-clock",
+        title: "Neon Cyber Clock",
+        description: "นาฬิกาดิจิทัลหน้าปัดล้ำยุคสไตล์ Cyberpunk ในตรอกเมืองเสื่อมโทรม แสดงผลแบบเรืองแสงสี Cyan & Magenta พร้อมเงาสะท้อนผิวน้ำเปียก เอฟเฟกต์ฝน/ไอน้ำระเหย และเครื่องสังเคราะห์เสียงบรรยากาศ (Web Audio Synth)",
+        category: "UI Component",
+        tags: ["CSS-Art", "Glow", "Canvas-Rain", "WebAudio"],
+        date: "2026-07-15",
+        url: "./neonclock/index.html",
+        icon: "⏰",
+        featured: true
+      },
+      {
+        id: "vector-space-shooter",
+        title: "Space Vector Shooter",
+        description: "เกมยิงยานอวกาศสไตล์เวกเตอร์เนออนสุดตระการตา! ควบคุมด้วยฟิสิกส์แรงเฉื่อย มีระบบอัปเกรดปืน เกราะป้องกัน คลื่นศัตรูหลากหลายแบบ และเสียงสังเคราะห์ Retro Synth!",
+        category: "Mini-Game",
+        tags: ["Canvas", "JS", "Retro", "WebAudio"],
+        date: "2026-07-15",
+        url: "./spacevectorshooter/index.html",
+        icon: "🚀",
+        featured: true
+      },
+      {
+        id: "syntax-markdown",
+        title: "Markdown Live Editor",
+        description: "เครื่องมือเขียนและแปลงโค้ด Markdown เป็น HTML แบบสดสองหน้าจอขนานกัน มีระบบช่วยการจัดรูปแบบหัวข้อ ลิงก์ และโหมดตรวจทาน",
+        category: "JavaScript",
+        tags: ["JS-Parser", "Markdown", "Utility"],
+        date: "2026-07-15",
+        url: "./markdown-editor/index.html",
+        icon: "📝",
+        featured: true
+      },
+      {
+        id: "gradient-generator",
+        title: "Mesh Gradient Builder",
+        description: "เครื่องมือออกแบบสีพื้นหลังแบบไล่ระดับ (Gradient Generator) สวยงามล้ำสมัย ปรับแต่งจุดสี ทิศทาง และคัดลอกโค้ด CSS ได้ทันที",
+        category: "UI Component",
+        tags: ["CSS-Grid", "ColorPicker", "Tool"],
+        date: "2026-05-30",
+        url: "#",
+        icon: "🎨",
+        featured: false
+      },
+      {
+        id: "pomodoro-timer",
+        title: "Cyber Pomodoro Clock",
+        description: "เครื่องมือจำกัดเวลาทำงานและพักผ่อนในสไตล์เนออนเทค ช่วยเพิ่มประสิทธิภาพการเขียนโค้ด พร้อมเสียงสังเคราะห์ปลุกเมื่อจบรอบ",
+        category: "Utilities",
+        tags: ["Timer", "AudioSynth", "Utility"],
+        date: "2026-05-18",
+        url: "#",
+        icon: "⏱️",
+        featured: false
+      }
+    ];
+
+    // -----------------------------------------------------------------
+    // 2. STATE MANAGEMENT & SETUP
+    // -----------------------------------------------------------------
+    let currentCategory = 'All';
+    let searchQuery = '';
+
+    window.addEventListener('load', () => {
+      calculateStats();
+      renderFilters();
+      renderGrid();
+      initThemeToggle();
+
+      // Attach event listeners
+      document.getElementById('search-input').addEventListener('input', (e) => {
+        searchQuery = e.target.value.toLowerCase().trim();
+        renderGrid();
+      });
+    });
+
+    // Theme Toggle Functionality
+    function initThemeToggle() {
+      const themeToggleBtn = document.getElementById('theme-toggle');
+      const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+      const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+
+      function updateThemeIcons() {
+        const isDark = document.documentElement.classList.contains('dark');
+        if (isDark) {
+          themeToggleLightIcon.classList.remove('hidden');
+          themeToggleDarkIcon.classList.add('hidden');
+        } else {
+          themeToggleLightIcon.classList.add('hidden');
+          themeToggleDarkIcon.classList.remove('hidden');
+        }
+      }
+
+      themeToggleBtn.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        updateThemeIcons();
+        renderFilters();
+        renderGrid();
+      });
+
+      // Set initial icons visibility
+      updateThemeIcons();
+    }
+
+    // -----------------------------------------------------------------
+    // 3. LOGICS & COMPONENT BUILDERS
+    // -----------------------------------------------------------------
+    
+    // Compute total counts for header dashboard stats
+    function calculateStats() {
+      document.getElementById('stat-total').innerText = PROJECTS.length;
+      
+      const gamesCount = PROJECTS.filter(p => p.category === 'Mini-Game').length;
+      document.getElementById('stat-games').innerText = gamesCount;
+
+      const uiCount = PROJECTS.filter(p => p.category === 'UI Component').length;
+      document.getElementById('stat-ui').innerText = uiCount;
+
+      const experimentsCount = PROJECTS.filter(p => p.category === 'JavaScript' || p.category === 'Utilities').length;
+      document.getElementById('stat-experiments').innerText = experimentsCount;
+    }
+
+    // Render filter buttons on screen
+    function renderFilters() {
+      // Gather all categories dynamically
+      const categories = ['All', ...new Set(PROJECTS.map(p => p.category))];
+      const tabsContainer = document.getElementById('filter-tabs-container');
+      tabsContainer.innerHTML = '';
+
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.onclick = () => filterCategory(cat);
+        btn.id = `filter-${cat}`;
+        
+        // Count count for category tag
+        const count = cat === 'All' ? PROJECTS.length : PROJECTS.filter(p => p.category === cat).length;
+        
+        btn.className = getFilterButtonClass(cat === currentCategory);
+        btn.innerHTML = `
+          <span>${cat === 'All' ? 'ทั้งหมด (All)' : cat}</span>
+          <span class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-gray-950 border border-slate-200 dark:border-gray-800 text-slate-500 dark:text-gray-400 font-mono">${count}</span>
+        `;
+
+        tabsContainer.appendChild(btn);
+      });
+    }
+
+    function getFilterButtonClass(isActive) {
+      if (isActive) {
+        return "flex items-center px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-neonCyan dark:to-neonPurple text-white dark:text-gray-950 shadow-md dark:shadow-lg border border-transparent transition-all duration-300";
+      }
+      return "flex items-center px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-100 dark:hover:bg-gray-850 text-slate-600 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-200 border border-slate-200 dark:border-gray-800 transition-all duration-300";
+    }
+
+    // Filter Trigger Handler
+    function filterCategory(cat) {
+      currentCategory = cat;
+      // Refresh styling of tabs
+      renderFilters();
+      // Render filtered projects
+      renderGrid();
+    }
+
+    // Main Projects grid renderer
+    function renderGrid() {
+      const grid = document.getElementById('projects-grid');
+      const emptyState = document.getElementById('empty-state');
+      grid.innerHTML = '';
+
+      // Filter array data based on state criteria
+      const filtered = PROJECTS.filter(p => {
+        const matchesCategory = currentCategory === 'All' || p.category === currentCategory;
+        const matchesSearch = p.title.toLowerCase().includes(searchQuery) || 
+                              p.description.toLowerCase().includes(searchQuery) || 
+                              p.tags.some(tag => tag.toLowerCase().includes(searchQuery));
+        return matchesCategory && matchesSearch;
+      });
+
+      // Update total found badge
+      document.getElementById('results-count').innerText = filtered.length;
+
+      // Handle Empty States
+      if (filtered.length === 0) {
+        grid.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        emptyState.classList.add('flex');
+        return;
+      }
+
+      grid.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+      emptyState.classList.remove('flex');
+
+      // Create and inject card nodes
+      filtered.forEach(p => {
+        const card = document.createElement('div');
+        card.className = "glass-card p-6 rounded-2xl flex flex-col justify-between transition-all duration-300 relative group overflow-hidden";
+        
+        // Highlight indicator for featured cards
+        let featuredBadge = '';
+        if (p.featured) {
+          featuredBadge = `
+            <span class="absolute top-4 right-4 flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500 dark:bg-neonCyan opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-indigo-500 dark:bg-neonCyan"></span>
+            </span>
+          `;
+        }
+
+        // Project Tags markup
+        const tagsHtml = p.tags.map(tag => `
+          <span class="text-[11px] font-mono text-slate-500 dark:text-gray-400 bg-slate-100 dark:bg-gray-900 border border-slate-200 dark:border-gray-800 px-2 py-0.5 rounded-md">
+            ${tag.startsWith('#') ? tag : '#' + tag}
+          </span>
+        `).join(' ');
+
+        // Action launch button link validation
+        const launchLink = p.url === '#' ? 'javascript:alert(\'โปรเจกต์นี้กำลังอยู่ในช่วงทดสอบพัฒนา จะเปิดให้ใช้งานเร็ว ๆ นี้!\')' : p.url;
+        const launchTarget = p.url === '#' ? '_self' : '_blank';
+
+        card.innerHTML = `
+          ${featuredBadge}
+          <div>
+            <!-- Header Card row -->
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-gray-900 border border-slate-200 dark:border-gray-800 flex items-center justify-center text-2xl">
+                ${p.icon}
+              </div>
+              <div>
+                <span class="text-[10px] font-mono tracking-wider text-indigo-600 dark:text-neonCyan uppercase">${p.category}</span>
+                <h3 class="text-base font-bold text-slate-800 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-neonCyan transition-all duration-300 mt-0.5">
+                  ${p.title}
+                </h3>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <p class="text-sm text-slate-600 dark:text-gray-400 mb-6 leading-relaxed">
+              ${p.description}
+            </p>
+          </div>
+
+          <div>
+            <!-- Tags Section -->
+            <div class="flex flex-wrap gap-1.5 mb-5">
+              ${tagsHtml}
+            </div>
+
+            <!-- Card Bottom Action Row -->
+            <div class="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-gray-800/60">
+              <span class="text-[11px] font-mono text-slate-400 dark:text-gray-500">
+                <i class="far fa-calendar-alt mr-1"></i> ${formatDate(p.date)}
+              </span>
+              <a 
+                href="${launchLink}" 
+                target="${launchTarget}"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-neonCyan group-hover:underline"
+              >
+                <span>Launch Project</span>
+                <i class="fas fa-arrow-right text-[10px] transition-transform duration-300 transform group-hover:translate-x-1"></i>
+              </a>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // Helper method to convert ISO dates into user readable Thai formats
+    function formatDate(dateStr) {
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      const date = new Date(dateStr);
+      // fallback in case of parsing errors
+      if (isNaN(date)) return dateStr;
+      return date.toLocaleDateString('th-TH', options);
+    }
+  </script>
+</body>
+</html>

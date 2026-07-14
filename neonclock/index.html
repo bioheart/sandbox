@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A futuristic cyberpunk digital wall clock mounted in a dark, grimy city alleyway. Massive glowing neon numbers, wet surface reflections, steam rising from vents, and ambient Web Audio synthesizer.">
+  <title>Holographic Neon Cyber Clock - Cyberpunk Digital Wall Clock</title>
+  
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="cyber-classic">
+
+  <!-- Cinematic Background Filters & Layers -->
+  <div class="cinematic-vignette"></div>
+  <div class="cinematic-grain"></div>
+
+  <!-- Background Environment Canvases -->
+  <canvas id="steam-canvas" class="canvas-layer"></canvas>
+  <canvas id="rain-canvas" class="canvas-layer"></canvas>
+
+  <!-- Alarm Warning Overlay screen flash -->
+  <div id="alarm-overlay" class="alarm-overlay-screen"></div>
+  <div id="alarm-banner" class="alarm-text-banner">WARNING: ALARM INTERRUPT PROTOCOL ACTIVE</div>
+
+  <!-- Distant Holographic Advertisements -->
+  <div class="holo-ad-panel">
+    <div class="holo-ad-title">Genom Corp</div>
+    <div>BODY ENHANCEMENTS</div>
+    <div>CYBERNETIC SYNERGY</div>
+    <div style="font-size: 0.45rem; color: rgba(255,0,127,0.4); margin-top: 3px;">70% OFF REPLICANT UPGRADES</div>
+  </div>
+
+  <div class="holo-ad-panel blue">
+    <div class="holo-ad-title">Megastructure</div>
+    <div>VOIGHT-KAMPFF</div>
+    <div>NEURAL DETECTORS</div>
+    <div style="font-size: 0.45rem; color: rgba(0,242,254,0.4); margin-top: 3px;">SECURE YOUR CONSCIOUSNESS</div>
+  </div>
+
+  <!-- Main App Wrapper -->
+  <div class="app-container">
+
+    <!-- Top Header System Bar -->
+    <div class="header-bar">
+      <a href="../index.html" class="back-btn">
+        <i class="fas fa-chevron-left"></i> BACK_TO_DASHBOARD
+      </a>
+      <span class="sys-label font-mono">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" style="border-radius: 50%; vertical-align: middle; margin-right: 5px;"></span>
+        ALLEY_NODE_404_SECURE
+      </span>
+    </div>
+
+    <!-- Main Clock Casing & Reflection Centerpiece -->
+    <div class="clock-assembly-wrapper">
+      
+      <!-- Casing Frame representing the metal housing -->
+      <div class="clock-casing">
+        
+        <!-- Screws in corner of housing -->
+        <div class="casing-screw screw-tl"></div>
+        <div class="casing-screw screw-tr"></div>
+        <div class="casing-screw screw-bl"></div>
+        <div class="casing-screw screw-br"></div>
+
+        <!-- Pulse-animating SVG circuits on the weathered metal face -->
+        <svg class="circuit-overlay" viewBox="0 0 800 240" xmlns="http://www.w3.org/2000/svg">
+          <!-- Left side circuits -->
+          <path class="circuit-path" d="M 20 40 L 100 40 L 140 80 L 180 80 L 180 120" />
+          <path class="circuit-path-secondary" d="M 15 160 L 80 160 L 120 120 L 120 70" />
+          <circle class="circuit-node" cx="180" cy="120" r="3" />
+          <circle class="circuit-node" cx="120" cy="70" r="2.5" />
+          
+          <!-- Top circuits -->
+          <path class="circuit-path" d="M 250 15 L 350 15 L 380 45" />
+          <path class="circuit-path-secondary" d="M 520 15 L 430 15 L 400 45" />
+          <circle class="circuit-node" cx="380" cy="45" r="2.5" />
+          <circle class="circuit-node" cx="400" cy="45" r="2.5" />
+
+          <!-- Right side circuits -->
+          <path class="circuit-path" d="M 780 40 L 700 40 L 660 80 L 620 80 L 620 120" />
+          <path class="circuit-path-secondary" d="M 785 160 L 720 160 L 680 120 L 680 70" />
+          <circle class="circuit-node" cx="620" cy="120" r="3" />
+          <circle class="circuit-node" cx="680" cy="70" r="2.5" />
+
+          <!-- Bottom circuits -->
+          <path class="circuit-path-secondary" d="M 280 220 L 320 220 L 340 200" />
+          <path class="circuit-path" d="M 500 220 L 460 220 L 440 200" />
+        </svg>
+
+        <!-- Digital screen showing glowing numbers -->
+        <div class="clock-display-screen">
+          <div class="time-display flicker-active">
+            <!-- Hours -->
+            <span id="hours" class="time-segment flickering-fast">23</span>
+            <span class="time-colon">:</span>
+            <!-- Minutes -->
+            <span id="minutes" class="time-segment">45</span>
+            <span class="time-colon">:</span>
+            <!-- Seconds -->
+            <span id="seconds" class="time-segment magenta flickering-slow">07</span>
+            
+            <!-- Milliseconds sub-counter -->
+            <span class="time-seconds">
+              <span id="ms-val" class="time-ms-box">00</span>
+            </span>
+          </div>
+
+          <!-- Bottom details block -->
+          <div class="hud-meta-panel">
+            <div class="hud-item">
+              <span class="hud-label">CALENDAR</span>
+              <span id="date-val" class="hud-val">MON 15 JUL 26</span>
+            </div>
+            
+            <div class="hud-item">
+              <span class="hud-label">CORE TEMP</span>
+              <span id="sys-temp" class="hud-val glowing">47°C</span>
+            </div>
+
+            <div class="hud-item">
+              <span class="hud-label">CPU LOAD</span>
+              <span id="cpu-load" class="hud-val glowing">24%</span>
+            </div>
+
+            <div class="hud-item text-center">
+              <span class="hud-label">TZ_NODE</span>
+              <span id="timezone-val" class="hud-val">LOCAL_NODE</span>
+            </div>
+
+            <div class="hud-item">
+              <span class="hud-label">NET PING</span>
+              <span id="net-ping" class="hud-val glowing">14MS</span>
+            </div>
+
+            <div class="hud-item text-right">
+              <span class="hud-label">SYSTEM_DB</span>
+              <span id="db-status" class="hud-val glowing">SYS_ONLINE</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Wet surface floor reflection mapping -->
+      <div class="reflection-floor-container">
+        <div class="reflected-clock">
+          <div id="ref-digits" class="reflected-digits">
+            23<span class="time-colon">:</span>45<span class="time-colon">:</span><span class="time-seconds">07</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Interactive Dashboard Panels -->
+    <div class="dashboard-grid">
+      
+      <!-- Control Panel 1: Hardware & Environments -->
+      <div class="hud-panel">
+        <div class="panel-header">
+          <span>CLOCK HARDWARE & WEATHER EMISSIONS</span>
+          <span style="font-size: 0.6rem; color: rgba(255, 255, 255, 0.3);">CTRL_01</span>
+        </div>
+        
+        <div class="panel-section">
+          <!-- Power switch -->
+          <button id="btn-power" class="btn-cyber active">
+            <i class="fas fa-power-off"></i> ONLINE
+          </button>
+          
+          <!-- Clock Mode switch (12/24) -->
+          <button id="btn-mode" class="btn-cyber">
+            <i class="fas fa-clock"></i> 24H
+          </button>
+
+          <!-- Toggle gas tube flickering -->
+          <button id="btn-flicker" class="btn-cyber active">
+            <i class="fas fa-bolt"></i> FLICKER
+          </button>
+
+          <!-- Rain Switch -->
+          <button id="btn-rain" class="btn-cyber active">
+            <i class="fas fa-cloud-showers-heavy"></i> RAIN ON
+          </button>
+
+          <!-- Steam Switch -->
+          <button id="btn-steam" class="btn-cyber active">
+            <i class="fas fa-wind"></i> STEAM ON
+          </button>
+        </div>
+
+        <div class="panel-section" style="margin-top: 5px;">
+          <!-- Theme selector -->
+          <span class="hud-label" style="align-self: center; margin-right: 5px;">PALETTE_THEME:</span>
+          <button class="btn-cyber active theme-select" data-theme-name="cyber-classic">CYBERPUNK</button>
+          <button class="btn-cyber theme-select" data-theme-name="toxic-hazard">TOXIC</button>
+          <button class="btn-cyber theme-select" data-theme-name="matrix">MATRIX</button>
+          <button class="btn-cyber theme-select" data-theme-name="synthwave">SYNTHWAVE</button>
+        </div>
+
+        <div class="panel-section" style="margin-top: 5px; width: 100%; display: flex; gap: 1.5rem;">
+          <!-- Rain density slider -->
+          <div class="slider-container">
+            <div class="slider-label">
+              <span>RAIN SPEED DENSITY</span>
+              <span id="label-rain-density">50%</span>
+            </div>
+            <input type="range" id="slider-rain" class="slider-cyber" min="0" max="100" value="50">
+          </div>
+
+          <!-- Steam density slider -->
+          <div class="slider-container">
+            <div class="slider-label">
+              <span>STEAM EMISSION RATE</span>
+              <span id="label-steam-density">40%</span>
+            </div>
+            <input type="range" id="slider-steam" class="slider-cyber" min="0" max="100" value="40">
+          </div>
+        </div>
+      </div>
+
+      <!-- Control Panel 2: Synthesizers & Alarms -->
+      <div class="hud-panel">
+        <div class="panel-header">
+          <span>WEB AUDIO SYNTH & ALARM PROTOCOL</span>
+          <span style="font-size: 0.6rem; color: rgba(255, 255, 255, 0.3);">CTRL_02</span>
+        </div>
+
+        <!-- Audio controls -->
+        <div class="panel-section">
+          <button id="btn-audio-toggle" class="btn-cyber">
+            <i class="fas fa-volume-mute"></i> MUTED
+          </button>
+
+          <div class="slider-container" style="flex-grow: 1;">
+            <div class="slider-label">
+              <span>MASTER SYNTH VOLUME</span>
+            </div>
+            <input type="range" id="slider-master-volume" class="slider-cyber" min="0" max="0.8" step="0.05" value="0.3">
+          </div>
+
+          <!-- Small audio activity visualizer bar -->
+          <div id="audio-visualizer-hud" class="audio-visualizer-bar-container">
+            <div class="visualizer-bar"></div>
+            <div class="visualizer-bar"></div>
+            <div class="visualizer-bar"></div>
+            <div class="visualizer-bar"></div>
+            <div class="visualizer-bar"></div>
+          </div>
+        </div>
+
+        <!-- Alarm manager -->
+        <div class="panel-section" style="justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 10px;">
+          <div class="alarm-status-indicator">
+            <div class="alarm-light" id="alarm-light-node"></div>
+            <span class="hud-label">ALARM_MODE:</span>
+          </div>
+
+          <div class="alarm-input-group">
+            <input type="time" id="alarm-time" class="alarm-time-input" value="06:00">
+            <button id="btn-alarm-toggle" class="btn-cyber">
+              <i class="fas fa-bell"></i> ENABLE
+            </button>
+            <button id="btn-alarm-snooze" class="btn-cyber" style="background: rgba(255, 0, 85, 0.1); border-color: rgba(255, 0, 85, 0.3);">
+              SNOOZE
+            </button>
+          </div>
+        </div>
+
+        <!-- Timezone selection tabs -->
+        <div class="panel-section" style="border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 10px; width: 100%;">
+          <span class="hud-label" style="align-self: center; margin-right: 5px; width: 100%;">GRID_NODE_GATEWAY:</span>
+          <div style="display: flex; gap: 0.4rem; width: 100%;">
+            <button class="btn-cyber active tz-select" data-tz="local" style="flex: 1;">LOCAL</button>
+            <button class="btn-cyber tz-select" data-tz="tokyo" style="flex: 1;">TOKYO</button>
+            <button class="btn-cyber tz-select" data-tz="berlin" style="flex: 1;">BERLIN</button>
+            <button class="btn-cyber tz-select" data-tz="york" style="flex: 1;">NEW YORK</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- SVG Filter definitions for ripples on wet floor reflection -->
+  <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="ripple-filter">
+        <!-- Generates fractal wave noise -->
+        <feTurbulence type="fractalNoise" baseFrequency="0.02 0.08" numOctaves="1" result="noise" seed="1" />
+        <!-- Displaces the input graphic based on red & green channels of the wave noise -->
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="12" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Interactive JavaScript Logic -->
+  <script src="clock.js"></script>
+</body>
+</html>

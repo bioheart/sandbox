@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown Live Editor | Tech Sandbox</title>
+  
+  <!-- Tailwind CSS via Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons for clean, developer-focused UI -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Marked.js for real-time Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- Google Fonts: Plus Jakarta Sans (UI) & JetBrains Mono (Editor/Code) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;850&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            neonCyan: '#00f2fe',
+            neonPurple: '#d946ef',
+            slate: {
+              850: '#151f32',
+              950: '#070a13',
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style type="text/css">
+    /* Global scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #070a13; /* slate-950 */
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b; /* slate-800 */
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155; /* slate-700 */
+    }
+
+    /* Selection Highlight */
+    ::selection {
+      background: rgba(0, 242, 254, 0.25);
+      color: #ffffff;
+    }
+
+    /* Live Preview Custom CSS Reset & Stylings */
+    .preview-content h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      margin-top: 1.75rem;
+      margin-bottom: 1rem;
+      color: #f8fafc;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.5rem;
+      letter-spacing: -0.025em;
+    }
+    .preview-content h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-top: 1.75rem;
+      margin-bottom: 0.75rem;
+      color: #f1f5f9;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.35rem;
+      letter-spacing: -0.02em;
+    }
+    .preview-content h3 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: #e2e8f0;
+    }
+    .preview-content h4 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+      color: #cbd5e1;
+    }
+    .preview-content p {
+      margin-top: 0.5rem;
+      margin-bottom: 1.25rem;
+      line-height: 1.8;
+      color: #94a3b8;
+    }
+    .preview-content strong {
+      color: #f8fafc;
+      font-weight: 600;
+    }
+    .preview-content em {
+      color: #e2e8f0;
+      font-style: italic;
+    }
+    .preview-content ul {
+      list-style-type: disc;
+      padding-left: 1.5rem;
+      margin-bottom: 1.25rem;
+      color: #cbd5e1;
+    }
+    .preview-content ol {
+      list-style-type: decimal;
+      padding-left: 1.5rem;
+      margin-bottom: 1.25rem;
+      color: #cbd5e1;
+    }
+    .preview-content li {
+      margin-bottom: 0.35rem;
+      line-height: 1.7;
+    }
+    .preview-content a {
+      color: #00f2fe;
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(0, 242, 254, 0.4);
+      transition: all 0.2s ease-in-out;
+    }
+    .preview-content a:hover {
+      color: #d946ef;
+      border-bottom-color: #d946ef;
+      border-bottom-style: solid;
+    }
+    .preview-content blockquote {
+      border-left: 4px solid #00f2fe;
+      background: rgba(13, 18, 30, 0.6);
+      padding: 1rem 1.5rem;
+      margin: 1.5rem 0;
+      border-radius: 0 0.75rem 0.75rem 0;
+      font-style: italic;
+      color: #94a3b8;
+      box-shadow: inset 2px 0 8px rgba(0, 242, 254, 0.05);
+    }
+    .preview-content code {
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(30, 41, 59, 0.8);
+      color: #ef4444; /* bright red code text for readability */
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.375rem;
+      font-size: 0.85em;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .preview-content pre {
+      background: #090d16;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+      overflow-x: auto;
+      box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(255, 255, 255, 0.03);
+    }
+    .preview-content pre code {
+      background: transparent;
+      color: #e2e8f0;
+      padding: 0;
+      border-radius: 0;
+      font-size: 0.875em;
+      display: block;
+      line-height: 1.6;
+      border: none;
+    }
+    .preview-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.75rem 0;
+      font-size: 0.95rem;
+      text-align: left;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+    .preview-content th {
+      background: #111827;
+      color: #f8fafc;
+      padding: 0.75rem 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-weight: 600;
+    }
+    .preview-content td {
+      padding: 0.75rem 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #cbd5e1;
+    }
+    .preview-content tr:nth-child(even) td {
+      background: rgba(17, 24, 39, 0.4);
+    }
+    .preview-content tr:hover td {
+      background: rgba(0, 242, 254, 0.03);
+    }
+    .preview-content hr {
+      border: 0;
+      border-top: 2px dashed rgba(255, 255, 255, 0.08);
+      margin: 2.25rem 0;
+    }
+    .preview-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 0.75rem;
+      margin: 1.5rem auto;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    }
+
+    /* Review Mode Transitions */
+    .editor-pane-transition {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .toolbar-transition {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    }
+
+    /* Glowing border elements */
+    .glow-border {
+      position: relative;
+    }
+    .glow-border::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      background: linear-gradient(90deg, #00f2fe, #d946ef);
+      border-radius: inherit;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .glow-border:focus-within::after {
+      opacity: 0.4;
+    }
+
+    /* Toast animation */
+    @keyframes slideUpFade {
+      0% {
+        opacity: 0;
+        transform: translateY(1.5rem);
+      }
+      15% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      85% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-1.5rem);
+      }
+    }
+    .toast-animate {
+      animation: slideUpFade 3s forwards cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 font-sans antialiased overflow-hidden flex flex-col">
+
+  <!-- Top Global Header -->
+  <header class="h-16 px-4 md:px-6 bg-slate-950/80 border-b border-slate-900 flex items-center justify-between z-30 shrink-0 backdrop-blur-md">
+    <div class="flex items-center gap-3">
+      <!-- Back Link -->
+      <a href="../index.html" class="flex items-center justify-center w-9 h-9 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-neonCyan hover:border-neonCyan/30 shadow-sm transition-all duration-200">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      </a>
+      <div class="h-5 w-px bg-slate-900"></div>
+      <!-- Logo -->
+      <div class="flex flex-col">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-neonCyan animate-pulse"></span>
+          <h1 class="font-extrabold text-sm md:text-base tracking-wide bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+            MARKDOWN LIVE EDITOR
+          </h1>
+        </div>
+        <span class="text-[10px] font-mono text-slate-500 tracking-wider">SINGLE-FILE TECH COMPONENT</span>
+      </div>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="flex items-center gap-2 md:gap-3">
+      <!-- Review Mode Toggle -->
+      <button 
+        id="btn-review"
+        onclick="toggleReviewMode()"
+        class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-900 text-slate-300 hover:text-white font-medium text-xs md:text-sm tracking-wide transition-all duration-200"
+        title="สลับโหมดตรวจทาน (Review Mode)"
+      >
+        <i data-lucide="eye" id="review-icon" class="w-4 h-4 text-neonCyan"></i>
+        <span id="review-text" class="hidden sm:inline">Review Mode</span>
+      </button>
+
+      <div class="h-5 w-px bg-slate-900"></div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2">
+        <button 
+          onclick="copyHTML()"
+          class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900/60 hover:bg-slate-900 hover:border-neonCyan/20 text-slate-300 hover:text-neonCyan font-medium text-xs md:text-sm tracking-wide transition-all duration-200"
+          title="คัดลอก HTML โค้ด"
+        >
+          <i data-lucide="copy" class="w-4 h-4"></i>
+          <span class="hidden md:inline">Copy HTML</span>
+        </button>
+
+        <button 
+          onclick="downloadMarkdown()"
+          class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-medium text-xs md:text-sm tracking-wide shadow-lg shadow-indigo-950/20 transition-all duration-200 hover:scale-[1.02]"
+          title="ดาวน์โหลดไฟล์ .md"
+        >
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Download .md</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toolbar & Format Helpers (Collapses on Review Mode) -->
+  <div 
+    id="editor-toolbar" 
+    class="toolbar-transition flex items-center justify-between bg-slate-900 border-b border-slate-950 px-4 md:px-6 py-2 overflow-x-auto shrink-0 z-20"
+  >
+    <div class="flex items-center gap-1 md:gap-1.5">
+      <!-- Headers -->
+      <button onclick="insertMarkdown('h1')" class="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-neonCyan transition-colors font-mono font-bold text-xs" title="Header 1 (H1)">H1</button>
+      <button onclick="insertMarkdown('h2')" class="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-neonCyan transition-colors font-mono font-bold text-xs" title="Header 2 (H2)">H2</button>
+      <button onclick="insertMarkdown('h3')" class="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-neonCyan transition-colors font-mono font-bold text-xs" title="Header 3 (H3)">H3</button>
+
+      <div class="h-4 w-px bg-slate-800 mx-1"></div>
+
+      <!-- Text modifiers -->
+      <button onclick="insertMarkdown('bold')" class="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-neonCyan transition-colors" title="ตัวหนา (Bold)"><i data-lucide="bold" class="w-4 h-4"></i></button>
+      <button onclick="insertMarkdown('italic')" class="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-neonCyan transition-colors" title="ตัวเอียง (Italic)"><i data-lucide="italic" class="w-4 h-4"></i></button>
+
+      <div class="h-4 w-px bg-slate-800 mx-1"></div>
+
+      <!-- Markdown Structures -->
+      <button onclick="insertMarkdown('link')" class="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-neonCyan transition-colors" title="แทรกลิงก์ (Link)"><i data-lucide="link" class="w-4 h-4"></i></button>
+      <button onclick="insertMarkdown('image')" class="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-neonCyan transition-colors" title="แทรกรูปภาพ (Image)"><i data-lucide="image" class="w-4 h-4"></i></button>
+      <button onclick="insertMarkdown('code')" class="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-neonCyan transition-colors" title="Code Block"><i data-lucide="code" class="w-4 h-4"></i></button>
+      <button onclick="insertMarkdown('blockquote')" class="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-neonCyan transition-colors" title="อ้างอิง (Blockquote)"><i data-lucide="quote" class="w-4 h-4"></i></button>
+
+      <div class="h-4 w-px bg-slate-800 mx-1"></div>
+
+      <!-- Lists -->
+      <button onclick="insertMarkdown('ul')" class="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-neonCyan transition-colors" title="Bullet List"><i data-lucide="list" class="w-4 h-4"></i></button>
+      <button onclick="insertMarkdown('ol')" class="p-2 rounded hover:bg-slate-800 text-slate-400 hover:text-neonCyan transition-colors" title="Numbered List"><i data-lucide="list-ordered" class="w-4 h-4"></i></button>
+    </div>
+
+    <!-- Quick instructions -->
+    <div class="hidden lg:flex items-center gap-2 text-[11px] font-mono text-slate-500 mr-2">
+      <span class="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-400">Tab</span>
+      <span>4 spaces</span>
+    </div>
+  </div>
+
+  <!-- Workspace Container: Split Screen Splitter -->
+  <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+
+    <!-- Left: Editor Pane (Collapsible) -->
+    <div 
+      id="editor-pane" 
+      class="editor-pane-transition w-full lg:w-1/2 flex flex-col border-r border-slate-900 bg-slate-950 flex-none h-1/2 lg:h-full overflow-hidden"
+    >
+      <!-- Sub-header info -->
+      <div class="h-9 px-4 bg-slate-950 border-b border-slate-900 flex items-center justify-between text-xs text-slate-500 font-mono shrink-0">
+        <span class="flex items-center gap-1.5">
+          <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span>source.md</span>
+        </span>
+        <div class="flex items-center gap-3">
+          <span>Words: <span id="stat-words" class="text-slate-300">0</span></span>
+          <span class="text-slate-700">|</span>
+          <span>Chars: <span id="stat-chars" class="text-slate-300">0</span></span>
+        </div>
+      </div>
+
+      <!-- Textarea workspace wrapper -->
+      <div class="flex-1 glow-border relative overflow-hidden">
+        <textarea 
+          id="editor-textarea"
+          oninput="updatePreview()"
+          class="w-full h-full p-4 md:p-6 bg-slate-950/80 text-slate-100 font-mono text-sm leading-relaxed focus:outline-none resize-none overflow-y-auto block placeholder-slate-700"
+          placeholder="พิมพ์ Markdown ที่นี่..."
+          spellcheck="false"
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- Right: Preview Pane (Fills Full Width when Left Pane is Collapsed) -->
+    <div 
+      id="preview-pane" 
+      class="editor-pane-transition w-full lg:flex-1 bg-slate-900/30 flex flex-col h-1/2 lg:h-full overflow-hidden"
+    >
+      <!-- Sub-header info -->
+      <div class="h-9 px-4 bg-slate-900 border-b border-slate-950 flex items-center justify-between text-xs text-slate-500 font-mono shrink-0">
+        <span class="flex items-center gap-1.5">
+          <i data-lucide="layout" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span>Live Preview</span>
+        </span>
+        <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-neonCyan">Active</span>
+      </div>
+
+      <!-- Rendered Content Box -->
+      <div class="flex-1 overflow-y-auto p-6 md:p-10">
+        <div 
+          id="preview-content" 
+          class="preview-content max-w-4xl mx-auto"
+        >
+          <!-- HTML is injected here -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Float Toast Notification Wrapper -->
+  <div id="toast-wrapper" class="fixed bottom-6 right-6 z-50 pointer-events-none"></div>
+
+  <!-- JavaScript Code logic -->
+  <script>
+    // 1. Initial template markdown content
+    const INITIAL_TEMPLATE = `# 🚀 ยินดีต้อนรับสู่ Markdown Live Editor
+
+เขียนเอกสาร Markdown ของคุณและดูผลลัพธ์แบบ Real-time ได้ทันทีฝั่งขวา!
+
+---
+
+## ✨ ฟีเจอร์ที่น่าสนใจ
+- **Split-Screen Layout**: ทำงานแยกฝั่งซ้าย-ขวาอย่างชัดเจน
+- **Review Mode**: ซ่อน Editor และแถบเครื่องมือเพื่ออ่านเอกสารแบบเต็มจอ
+- **Toolbar Helpers**: คลิกแทรกรูปแบบ Markdown ได้อย่างสะดวกรวดเร็ว
+- **Developer Friendly**: รองรับการกดปุ่ม \`Tab\` เพื่อเว้นวรรค 4 ช่อง
+- **Copy & Download**: คัดลอกโค้ด HTML หรือดาวน์โหลดเป็นไฟล์ \`.md\` ได้ง่ายๆ
+
+---
+
+## 📝 ตัวอย่างการจัดรูปแบบ (Formatting)
+
+คุณสามารถใช้ตัวหนาอย่าง **Bold Text** หรือตัวเอียงอย่าง *Italic Text* หรือแม้แต่การใส่ลิงก์ไปยัง [Google](https://google.com) ได้ง่ายๆ
+
+### 💡 รายการสิ่งต้องทำ (Lists)
+1. เรียนรู้คำสั่งมาร์กดาวน์พื้นฐาน
+2. พัฒนาเว็บแอปพลิเคชันสุดเจ๋ง
+3. เผยแพร่ผลงานให้โลกเห็น
+
+และ bullet list:
+- รวดเร็วและมีประสิทธิภาพ
+- ดีไซน์สวยงามสไตล์ Modern Tech
+- ปรับแต่งได้ตามต้องการ
+
+---
+
+## 💻 ตัวอย่าง Code Block
+
+ตัวอย่างฟังก์ชันคำนวณเลขฟีโบนัชชีใน JavaScript:
+
+\`\`\`javascript
+function fibonacci(n) {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+console.log(fibonacci(10)); // ผลลัพธ์: 55
+\`\`\`
+
+---
+
+## 💬 คำคม / ข้อความอ้างอิง (Blockquote)
+
+> "The only way to do great work is to love what you do."
+> — Steve Jobs
+
+---
+
+## 📊 ตารางข้อมูล (Table)
+
+| ฟีเจอร์ | สถานะการทำงาน | คำอธิบาย |
+| :--- | :---: | :--- |
+| Real-time Preview | ✅ | อัปเดตทันทีที่พิมพ์ |
+| Tab Indentation | ✅ | พิมพ์ Space 4 ช่องเมื่อกด Tab |
+| Copy HTML | ✅ | คัดลอกโค้ด HTML เข้า Clipboard |
+| Download File | ✅ | บันทึกไฟล์เป็นสกุล .md ลงเครื่อง |
+`;
+
+    // DOM Reference caches
+    const editorTextarea = document.getElementById('editor-textarea');
+    const previewContent = document.getElementById('preview-content');
+    const editorPane = document.getElementById('editor-pane');
+    const previewPane = document.getElementById('preview-pane');
+    const editorToolbar = document.getElementById('editor-toolbar');
+    
+    const statWords = document.getElementById('stat-words');
+    const statChars = document.getElementById('stat-chars');
+    const toastWrapper = document.getElementById('toast-wrapper');
+
+    const btnReview = document.getElementById('btn-review');
+    const reviewIcon = document.getElementById('review-icon');
+    const reviewText = document.getElementById('review-text');
+
+    let reviewMode = false;
+
+    // 2. Initialize application on load
+    window.addEventListener('DOMContentLoaded', () => {
+      // Configure Marked.js properties
+      marked.setOptions({
+        breaks: true,
+        gfm: true,
+        headerIds: false,
+        mangle: false
+      });
+
+      // Load initial template into editor
+      editorTextarea.value = INITIAL_TEMPLATE;
+      
+      // Update preview output & stats
+      updatePreview();
+      
+      // Set up Tab key support on the editor
+      setupTabKeySupport();
+
+      // Render Lucide icons
+      lucide.createIcons();
+    });
+
+    // 3. Update Preview Content and Document stats
+    function updatePreview() {
+      const rawText = editorTextarea.value;
+      
+      // Compute & render HTML
+      const parsedHTML = marked.parse(rawText);
+      previewContent.innerHTML = parsedHTML;
+
+      // Update statistics
+      updateStats(rawText);
+
+      // Add modern Code Block helper buttons
+      addCodeCopyButtons();
+    }
+
+    // 4. Document statistics handler
+    function updateStats(text) {
+      // Character count (including spaces/newlines)
+      statChars.innerText = text.length;
+
+      // Word count
+      const trimmed = text.trim();
+      if (!trimmed) {
+        statWords.innerText = '0';
+        return;
+      }
+      
+      const wordsArray = trimmed.split(/\s+/);
+      statWords.innerText = wordsArray.length;
+    }
+
+    // 5. Code blocks premium layout copy action
+    function addCodeCopyButtons() {
+      const preBlocks = previewContent.querySelectorAll('pre');
+      preBlocks.forEach((block) => {
+        // Prevent duplicate injection
+        if (block.querySelector('.btn-copy-code')) return;
+        
+        block.classList.add('relative', 'group');
+        
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn-copy-code absolute top-3 right-3 p-1.5 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 border border-slate-700/50 flex items-center justify-center';
+        copyBtn.innerHTML = '<i data-lucide="copy" class="w-3.5 h-3.5"></i>';
+        copyBtn.title = 'Copy Code';
+        
+        copyBtn.addEventListener('click', () => {
+          const codeTag = block.querySelector('code');
+          const codeText = codeTag ? codeTag.innerText : '';
+          
+          navigator.clipboard.writeText(codeText).then(() => {
+            copyBtn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>';
+            lucide.createIcons();
+            showToast('คัดลอกโค้ดลงคลิปบอร์ดแล้ว!');
+            
+            setTimeout(() => {
+              copyBtn.innerHTML = '<i data-lucide="copy" class="w-3.5 h-3.5"></i>';
+              lucide.createIcons();
+            }, 2000);
+          }).catch((err) => {
+            console.error('Failed to copy code: ', err);
+            showToast('คัดลอกโค้ดล้มเหลว', true);
+          });
+        });
+        
+        block.appendChild(copyBtn);
+      });
+      lucide.createIcons();
+    }
+
+    // 6. Keyboard tab indentation interceptor
+    function setupTabKeySupport() {
+      editorTextarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+          // Block tab behavior focusing away
+          e.preventDefault();
+          
+          const start = editorTextarea.selectionStart;
+          const end = editorTextarea.selectionEnd;
+          const val = editorTextarea.value;
+          
+          // Insert 4 spaces at current caret position
+          editorTextarea.value = val.substring(0, start) + '    ' + val.substring(end);
+          
+          // Restore cursor index positions
+          editorTextarea.selectionStart = editorTextarea.selectionEnd = start + 4;
+          
+          // Trigger preview parsing flow
+          updatePreview();
+        }
+      });
+    }
+
+    // 7. Toolbar Syntax Helper logic
+    function insertMarkdown(type) {
+      const start = editorTextarea.selectionStart;
+      const end = editorTextarea.selectionEnd;
+      const originalText = editorTextarea.value;
+      const selection = originalText.substring(start, end);
+      
+      let insertion = '';
+      let cursorOffset = 0; // Where to put cursor relative to start if selection is empty
+      
+      switch (type) {
+        case 'h1':
+          insertion = `# ${selection || 'Heading 1'}`;
+          cursorOffset = selection ? insertion.length : 2;
+          break;
+        case 'h2':
+          insertion = `## ${selection || 'Heading 2'}`;
+          cursorOffset = selection ? insertion.length : 3;
+          break;
+        case 'h3':
+          insertion = `### ${selection || 'Heading 3'}`;
+          cursorOffset = selection ? insertion.length : 4;
+          break;
+        case 'bold':
+          insertion = `**${selection || 'ตัวหนา'}**`;
+          cursorOffset = selection ? insertion.length : 2;
+          break;
+        case 'italic':
+          insertion = `*${selection || 'ตัวเอียง'}*`;
+          cursorOffset = selection ? insertion.length : 1;
+          break;
+        case 'link':
+          insertion = `[${selection || 'ข้อความลิงก์'}](https://example.com)`;
+          cursorOffset = selection ? insertion.length : 1;
+          break;
+        case 'image':
+          insertion = `![${selection || 'คำอธิบายรูปภาพ'}](https://example.com/image.png)`;
+          cursorOffset = selection ? insertion.length : 2;
+          break;
+        case 'code':
+          insertion = `\n\`\`\`javascript\n${selection || '// โค้ดของคุณตรงนี้'}\n\`\`\`\n`;
+          cursorOffset = selection ? insertion.length : 16;
+          break;
+        case 'blockquote':
+          insertion = `> ${selection || 'ข้อความอ้างอิง'}`;
+          cursorOffset = selection ? insertion.length : 2;
+          break;
+        case 'ul':
+          insertion = `- ${selection || 'รายการ'}`;
+          cursorOffset = selection ? insertion.length : 2;
+          break;
+        case 'ol':
+          insertion = `1. ${selection || 'รายการ'}`;
+          cursorOffset = selection ? insertion.length : 3;
+          break;
+      }
+
+      // Inject syntax
+      editorTextarea.value = originalText.substring(0, start) + insertion + originalText.substring(end);
+      
+      // Update preview immediately
+      updatePreview();
+      
+      // Re-focus text input area
+      editorTextarea.focus();
+      
+      // Adjust cursor selection range
+      if (selection) {
+        // Place cursor after selection modified block
+        const targetPos = start + insertion.length;
+        editorTextarea.setSelectionRange(targetPos, targetPos);
+      } else {
+        // Place cursor inside empty tag placeholder structure
+        const targetPos = start + cursorOffset;
+        editorTextarea.setSelectionRange(targetPos, targetPos);
+      }
+    }
+
+    // 8. Toggle Review Mode (Full Width Preview)
+    function toggleReviewMode() {
+      reviewMode = !reviewMode;
+      
+      if (reviewMode) {
+        // 1. Hide Editor Pane
+        editorPane.classList.add('hidden', 'lg:hidden');
+        
+        // 2. Hide Toolbar
+        editorToolbar.classList.add('hidden');
+        
+        // 3. Update Toggle Button Look
+        btnReview.classList.remove('bg-slate-900/60', 'text-slate-300');
+        btnReview.classList.add('bg-neonCyan/15', 'text-white', 'border-neonCyan/30');
+        reviewIcon.setAttribute('data-lucide', 'eye-off');
+        reviewText.innerText = 'Exit Review';
+        
+        showToast('เปิดโหมดตรวจทาน (Preview Full Width)');
+      } else {
+        // 1. Show Editor Pane
+        editorPane.classList.remove('hidden', 'lg:hidden');
+        
+        // 2. Show Toolbar
+        editorToolbar.classList.remove('hidden');
+        
+        // 3. Restore Toggle Button Look
+        btnReview.classList.add('bg-slate-900/60', 'text-slate-300');
+        btnReview.classList.remove('bg-neonCyan/15', 'text-white', 'border-neonCyan/30');
+        reviewIcon.setAttribute('data-lucide', 'eye');
+        reviewText.innerText = 'Review Mode';
+        
+        showToast('กลับสู่โหมดแก้ไขปกติแล้ว');
+      }
+      
+      // Re-render Lucide Icons for icon switch
+      lucide.createIcons();
+    }
+
+    // 9. Copy HTML functionality
+    function copyHTML() {
+      const htmlContent = previewContent.innerHTML;
+      
+      navigator.clipboard.writeText(htmlContent).then(() => {
+        showToast('Copied HTML! คัดลอกโค้ด HTML เรียบร้อยแล้ว');
+      }).catch((err) => {
+        console.error('Could not copy HTML: ', err);
+        showToast('ไม่สามารถคัดลอกข้อมูลได้', true);
+      });
+    }
+
+    // 10. Download Markdown file helper
+    function downloadMarkdown() {
+      const content = editorTextarea.value;
+      const blob = new Blob([content], { type: 'text/markdown;charset=utf-8;' });
+      
+      // Date formatting for filename: document_YYYY-MM-DD.md
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const filename = `document_${year}-${month}-${day}.md`;
+      
+      const link = document.createElement('a');
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast(`ดาวน์โหลดไฟล์สำเร็จ: ${filename}`);
+      } else {
+        showToast('เบราว์เซอร์ไม่รองรับการดาวน์โหลดไฟล์อัตโนมัติ', true);
+      }
+    }
+
+    // 11. Toast message notification engine
+    function showToast(message, isError = false) {
+      // Remove any existing toast elements for instant trigger
+      const activeToasts = document.querySelectorAll('.custom-toast');
+      activeToasts.forEach(t => t.remove());
+
+      const toast = document.createElement('div');
+      toast.className = `custom-toast toast-animate flex items-center gap-3 px-4 py-3 rounded-xl backdrop-blur-md shadow-2xl border text-sm font-medium tracking-wide z-50 pointer-events-auto`;
+      
+      if (isError) {
+        toast.className += ' bg-rose-950/90 border-rose-500/30 text-rose-200';
+        toast.innerHTML = `<i data-lucide="alert-circle" class="w-4.5 h-4.5 text-rose-400 shrink-0"></i> <span>${message}</span>`;
+      } else {
+        toast.className += ' bg-slate-900/90 border-neonCyan/30 text-white';
+        toast.innerHTML = `<i data-lucide="check-circle-2" class="w-4.5 h-4.5 text-neonCyan shrink-0"></i> <span>${message}</span>`;
+      }
+      
+      toastWrapper.appendChild(toast);
+      lucide.createIcons();
+
+      // Auto clear DOM element after animation ends
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
