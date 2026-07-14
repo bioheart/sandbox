@@ -311,31 +311,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentTz = timezones[state.activeTimezone];
     if (state.activeTimezone !== 'local' && currentTz.iana) {
       try {
-        const formatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: currentTz.iana,
-          hour12: false,
-          year: 'numeric',
-          month: 'numeric',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: 'numeric',
-          second: 'numeric'
-        });
-        const parts = formatter.formatToParts(now);
-        const partMap = {};
-        parts.forEach(p => {
-          partMap[p.type] = p.value;
-        });
-
-        currentTzTime = new Date(
-          parseInt(partMap.year),
-          parseInt(partMap.month) - 1,
-          parseInt(partMap.day),
-          parseInt(partMap.hour),
-          parseInt(partMap.minute),
-          parseInt(partMap.second),
-          now.getMilliseconds()
-        );
+        const tzString = now.toLocaleString('en-US-u-ca-gregory', { timeZone: currentTz.iana });
+        const cleanTzString = tzString.replace(/\s+/g, ' ');
+        const parsedDate = new Date(cleanTzString);
+        if (!isNaN(parsedDate.getTime())) {
+          currentTzTime = parsedDate;
+        } else {
+          throw new Error("Invalid parsed date");
+        }
       } catch (err) {
         console.warn("Timezone calculation failed, reverting to local.", err);
         currentTzTime = now;
