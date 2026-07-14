@@ -220,15 +220,21 @@
           
           <!-- Section 1: Global Configs & Actions -->
           <div class="flex items-center justify-between border-b border-gray-800/70 pb-4">
-            <div class="flex items-center gap-2">
-              <i data-lucide="settings" class="w-4 h-4 text-indigo-400"></i>
-              <h2 class="text-sm font-bold text-gray-200 tracking-wide uppercase">Controls</h2>
+            <div class="flex items-center gap-1.5">
+              <!-- Undo Button -->
+              <button onclick="undo()" class="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors border border-transparent hover:border-gray-700" title="Undo (Ctrl+Z)">
+                <i data-lucide="undo" class="w-3.5 h-3.5"></i>
+              </button>
+              <!-- Redo Button -->
+              <button onclick="redo()" class="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors border border-transparent hover:border-gray-700" title="Redo (Ctrl+Y)">
+                <i data-lucide="redo" class="w-3.5 h-3.5"></i>
+              </button>
+              
+              <!-- Add Point button -->
+              <button id="btn-add-point" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-indigo-400 hover:text-indigo-300 border border-gray-750 transition-colors">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Point
+              </button>
             </div>
-            
-            <!-- Add Point button -->
-            <button id="btn-add-point" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-indigo-400 hover:text-indigo-300 border border-gray-750 transition-colors">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Point
-            </button>
           </div>
 
           <!-- Animation Toggle Switch -->
@@ -348,6 +354,75 @@
       }
     };
 
+    // Undo / Redo History State
+    let undoStack = [];
+    let redoStack = [];
+    const maxHistory = 50;
+
+    function cloneState() {
+      return {
+        baseColor: baseCanvasColor,
+        points: points.map(pt => ({
+          id: pt.id,
+          x: pt.x,
+          y: pt.y,
+          baseX: pt.baseX,
+          baseY: pt.baseY,
+          color: pt.color,
+          opacity: pt.opacity,
+          radius: pt.radius,
+          angleX: pt.angleX,
+          angleY: pt.angleY,
+          speedX: pt.speedX,
+          speedY: pt.speedY,
+          rangeX: pt.rangeX,
+          rangeY: pt.rangeY
+        }))
+      };
+    }
+
+    function pushState() {
+      undoStack.push(cloneState());
+      if (undoStack.length > maxHistory) {
+        undoStack.shift();
+      }
+      redoStack = []; // Clear redo stack on new action
+    }
+
+    function undo() {
+      if (undoStack.length === 0) {
+        showToast("Undo", "ไม่มีขั้นตอนย้อนกลับแล้ว", "warning");
+        return;
+      }
+      redoStack.push(cloneState());
+      const prevState = undoStack.pop();
+      restoreState(prevState);
+      showToast("Undo", "เลิกทำการเปลี่ยนแปลงล่าสุด (Ctrl+Z)", "info");
+    }
+
+    function redo() {
+      if (redoStack.length === 0) {
+        showToast("Redo", "ไม่มีขั้นตอนทำซ้ำแล้ว", "warning");
+        return;
+      }
+      undoStack.push(cloneState());
+      const nextState = redoStack.pop();
+      restoreState(nextState);
+      showToast("Redo", "ทำซ้ำการเปลี่ยนแปลงล่าสุด (Ctrl+Y)", "info");
+    }
+
+    function restoreState(state) {
+      baseCanvasColor = state.baseColor;
+      document.getElementById('base-color-picker').value = baseCanvasColor;
+      document.getElementById('base-color-hex').value = baseCanvasColor.toUpperCase();
+      
+      points = state.points.map(pt => ({ ...pt }));
+      
+      renderPointsList();
+      renderHandles();
+      updateGradientCSS();
+    }
+
     // Helper functions for math & color utilities
     const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
 
@@ -410,6 +485,10 @@
     function applyPreset(name) {
       const pData = PRESETS[name];
       if (!pData) return;
+
+      if (points.length > 0) {
+        pushState(); // Save state before preset application
+      }
 
       baseCanvasColor = pData.base;
       document.getElementById('base-color-picker').value = baseCanvasColor;
@@ -475,8 +554,8 @@
             
             <div class="flex items-center gap-2">
               <!-- Color input and Hex value -->
-              <input type="color" class="color-picker-wrapper w-6.5 h-6.5 bg-transparent cursor-pointer rounded-lg border border-transparent hover:scale-105 transition-transform" value="${pt.color}" oninput="handlePointPropertyUpdate('${pt.id}', 'color', this.value)">
-              <input type="text" class="w-16 bg-gray-950 border border-gray-800 text-[10px] font-mono text-gray-405 uppercase rounded text-center px-1 py-0.5" value="${pt.color}" onchange="handlePointPropertyUpdate('${pt.id}', 'color', this.value)">
+              <input type="color" class="color-picker-wrapper w-6.5 h-6.5 bg-transparent cursor-pointer rounded-lg border border-transparent hover:scale-105 transition-transform" value="${pt.color}" onmousedown="pushState()" ontouchstart="pushState()" oninput="handlePointPropertyUpdate('${pt.id}', 'color', this.value)">
+              <input type="text" class="w-16 bg-gray-950 border border-gray-800 text-[10px] font-mono text-gray-405 uppercase rounded text-center px-1 py-0.5" value="${pt.color}" onfocus="this.dataset.oldVal = this.value" onchange="if(this.value !== this.dataset.oldVal) { pushState(); handlePointPropertyUpdate('${pt.id}', 'color', this.value); }">
               
               <!-- Delete point button -->
               <button onclick="deletePoint('${pt.id}')" class="p-1 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded transition-colors" title="ลบจุดสี" ${points.length <= minPoints ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>
@@ -492,7 +571,7 @@
                 <span>OPACITY</span>
                 <span>${Math.round(pt.opacity * 100)}%</span>
               </div>
-              <input type="range" min="0" max="1" step="0.01" value="${pt.opacity}" oninput="handlePointPropertyUpdate('${pt.id}', 'opacity', parseFloat(this.value))" class="w-full">
+              <input type="range" min="0" max="1" step="0.01" value="${pt.opacity}" onmousedown="pushState()" ontouchstart="pushState()" oninput="handlePointPropertyUpdate('${pt.id}', 'opacity', parseFloat(this.value))" class="w-full">
             </div>
 
             <!-- Radius slider -->
@@ -501,7 +580,7 @@
                 <span>RADIUS</span>
                 <span>${pt.radius}%</span>
               </div>
-              <input type="range" min="10" max="120" step="1" value="${pt.radius}" oninput="handlePointPropertyUpdate('${pt.id}', 'radius', parseInt(this.value))" class="w-full">
+              <input type="range" min="10" max="120" step="1" value="${pt.radius}" onmousedown="pushState()" ontouchstart="pushState()" oninput="handlePointPropertyUpdate('${pt.id}', 'radius', parseInt(this.value))" class="w-full">
             </div>
           </div>
           
@@ -512,7 +591,7 @@
                 <span>POS X</span>
                 <span>${Math.round(pt.x)}%</span>
               </div>
-              <input type="range" min="0" max="100" step="1" value="${pt.x}" oninput="handlePointPropertyUpdate('${pt.id}', 'x', parseFloat(this.value))" class="w-full">
+              <input type="range" min="0" max="100" step="1" value="${pt.x}" onmousedown="pushState()" ontouchstart="pushState()" oninput="handlePointPropertyUpdate('${pt.id}', 'x', parseFloat(this.value))" class="w-full">
             </div>
             
             <div class="flex flex-col gap-1">
@@ -520,7 +599,7 @@
                 <span>POS Y</span>
                 <span>${Math.round(pt.y)}%</span>
               </div>
-              <input type="range" min="0" max="100" step="1" value="${pt.y}" oninput="handlePointPropertyUpdate('${pt.id}', 'y', parseFloat(this.value))" class="w-full">
+              <input type="range" min="0" max="100" step="1" value="${pt.y}" onmousedown="pushState()" ontouchstart="pushState()" oninput="handlePointPropertyUpdate('${pt.id}', 'y', parseFloat(this.value))" class="w-full">
             </div>
           </div>
         `;
@@ -590,6 +669,8 @@
         return;
       }
       
+      pushState(); // Save state before adding
+
       // Find a semi-random spot near the center
       const x = 20 + Math.random() * 60;
       const y = 20 + Math.random() * 60;
@@ -613,6 +694,8 @@
         return;
       }
 
+      pushState(); // Save state before deleting
+
       points = points.filter(pt => pt.id !== id);
       if (activePointId === id) activePointId = null;
 
@@ -623,19 +706,28 @@
     }
 
     // Base background color update handlers
+    document.getElementById('base-color-picker').addEventListener('mousedown', pushState);
+    document.getElementById('base-color-picker').addEventListener('touchstart', pushState);
     document.getElementById('base-color-picker').addEventListener('input', (e) => {
       baseCanvasColor = e.target.value;
       document.getElementById('base-color-hex').value = baseCanvasColor.toUpperCase();
       updateGradientCSS();
     });
 
+    document.getElementById('base-color-hex').addEventListener('focus', function() {
+      this.dataset.oldVal = this.value;
+    });
+
     document.getElementById('base-color-hex').addEventListener('change', (e) => {
       let val = e.target.value.trim();
       if (!val.startsWith('#')) val = '#' + val;
       if (/^#[0-9A-F]{6}$/i.test(val) || /^#[0-9A-F]{3}$/i.test(val)) {
-        baseCanvasColor = val;
-        document.getElementById('base-color-picker').value = val;
-        updateGradientCSS();
+        if (val !== e.target.dataset.oldVal) {
+          pushState();
+          baseCanvasColor = val;
+          document.getElementById('base-color-picker').value = val;
+          updateGradientCSS();
+        }
       } else {
         e.target.value = baseCanvasColor.toUpperCase();
       }
@@ -647,6 +739,7 @@
     const canvasContainer = document.getElementById('canvas-container');
 
     function startDrag(e, id) {
+      pushState(); // Save state before dragging starts
       activePointId = id;
       
       // Update UI active states immediately
@@ -913,6 +1006,26 @@
       initDefaultPoints();
       updateCanvasResolutionReadout();
       document.getElementById('btn-add-point').addEventListener('click', addPoint);
+
+      // Global Keyboard Shortcuts (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z)
+      window.addEventListener('keydown', (e) => {
+        // If typing in a text input, don't trigger undo/redo shortcuts to avoid messing with text editing
+        if (e.target.tagName === 'INPUT' && e.target.type === 'text') return;
+
+        if (e.ctrlKey || e.metaKey) {
+          if (e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            if (e.shiftKey) {
+              redo();
+            } else {
+              undo();
+            }
+          } else if (e.key.toLowerCase() === 'y') {
+            e.preventDefault();
+            redo();
+          }
+        }
+      });
     });
 
   </script>
