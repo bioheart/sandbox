@@ -14,6 +14,10 @@
   <!-- Marked.js for real-time Markdown parsing -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+  <!-- Turndown.js & Turndown GFM Plugin for converting HTML preview edits back to Markdown -->
+  <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+  <script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
+
   <!-- Google Fonts: Plus Jakarta Sans (UI) & JetBrains Mono (Editor/Code) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -412,16 +416,18 @@
       <div class="h-9 px-4 bg-slate-900 border-b border-slate-950 flex items-center justify-between text-xs text-slate-500 font-mono shrink-0">
         <span class="flex items-center gap-1.5">
           <i data-lucide="layout" class="w-3.5 h-3.5 text-slate-400"></i>
-          <span>Live Preview</span>
+          <span>Live Preview <span class="text-slate-600 text-[10px] hidden sm:inline">(คลิกพิมพ์แก้ไขตรงนี้ได้)</span></span>
         </span>
-        <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-neonCyan">Active</span>
+        <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-neonCyan">Interactive</span>
       </div>
 
       <!-- Rendered Content Box -->
       <div class="flex-1 overflow-y-auto p-6 md:p-10">
         <div 
           id="preview-content" 
-          class="preview-content max-w-4xl mx-auto"
+          contenteditable="true"
+          class="preview-content max-w-4xl mx-auto focus:outline-none min-h-[calc(100%-2rem)]"
+          oninput="onPreviewInput()"
         >
           <!-- HTML is injected here -->
         </div>
@@ -514,6 +520,8 @@ console.log(fibonacci(10)); // ผลลัพธ์: 55
     const reviewText = document.getElementById('review-text');
 
     let reviewMode = false;
+    let activeFocus = 'editor'; // 'editor' or 'preview'
+    let turndownService;
 
     // 2. Initialize application on load
     window.addEventListener('DOMContentLoaded', () => {
@@ -525,6 +533,17 @@ console.log(fibonacci(10)); // ผลลัพธ์: 55
         mangle: false
       });
 
+      // Configure Turndown Service
+      turndownService = new TurndownService({
+        headingStyle: 'atx',
+        hr: '---',
+        bullet: '-',
+        codeBlockStyle: 'fenced'
+      });
+      if (typeof turndownPluginGfm !== 'undefined') {
+        turndownService.use(turndownPluginGfm.gfm);
+      }
+
       // Load initial template into editor
       editorTextarea.value = INITIAL_TEMPLATE;
       
@@ -534,12 +553,17 @@ console.log(fibonacci(10)); // ผลลัพธ์: 55
       // Set up Tab key support on the editor
       setupTabKeySupport();
 
+      // Track cursor focus
+      setupFocusTracking();
+
       // Render Lucide icons
       lucide.createIcons();
     });
 
     // 3. Update Preview Content and Document stats
     function updatePreview() {
+      if (activeFocus === 'preview') return;
+
       const rawText = editorTextarea.value;
       
       // Compute & render HTML
@@ -567,6 +591,49 @@ console.log(fibonacci(10)); // ผลลัพธ์: 55
       
       const wordsArray = trimmed.split(/\s+/);
       statWords.innerText = wordsArray.length;
+    }
+
+    // 4.1 Focus state tracking
+    function setupFocusTracking() {
+      editorTextarea.addEventListener('focus', () => {
+        activeFocus = 'editor';
+        previewPane.classList.remove('border-neonCyan/20', 'bg-slate-900/40');
+      });
+
+      previewContent.addEventListener('focus', () => {
+        activeFocus = 'preview';
+        previewPane.classList.add('border-neonCyan/20', 'bg-slate-900/40');
+      });
+
+      previewContent.addEventListener('blur', () => {
+        // Delay to allow clicking interactive controls without resetting cursor immediately
+        setTimeout(() => {
+          if (document.activeElement !== previewContent) {
+            activeFocus = 'editor';
+            updatePreview();
+          }
+        }, 150);
+      });
+    }
+
+    // 4.2 Sync edited preview back to Markdown editor
+    function onPreviewInput() {
+      if (activeFocus === 'preview') {
+        const clone = previewContent.cloneNode(true);
+        
+        // Remove copy buttons
+        const copyBtns = clone.querySelectorAll('.btn-copy-code');
+        copyBtns.forEach(btn => btn.remove());
+
+        // Convert HTML back to markdown
+        const markdown = turndownService.turndown(clone.innerHTML);
+        
+        // Update textarea value directly
+        editorTextarea.value = markdown;
+        
+        // Update stats
+        updateStats(markdown);
+      }
     }
 
     // 5. Code blocks premium layout copy action

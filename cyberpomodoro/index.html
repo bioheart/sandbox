@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyber Pomodoro Clock - Hack & Focus Console</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Fira+Code:wght@300;400;600&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              black: '#030307',
+              dark: '#07070c',
+              gray: '#0d0d15',
+              card: '#11111d',
+              border: '#1f1f2e',
+              cyan: '#00f0ff',
+              pink: '#ff007f',
+              green: '#39ff14',
+              blue: '#0047ff',
+              yellow: '#ffdf00',
+              red: '#ff0055',
+            }
+          },
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            mono: ['Share Tech Mono', 'monospace'],
+            code: ['Fira Code', 'monospace']
+          },
+          animation: {
+            'pulse-glow': 'pulseGlow 2s infinite alternate',
+            'scanline': 'scanline 8s linear infinite',
+            'flicker': 'flicker 0.15s infinite',
+            'blink': 'blink 1s step-end infinite',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style type="text/css">
+    /* Global Neon Variable Defaults - Updated by JS dynamically */
+    :root {
+      --theme-color: #ff007f; /* Start with Work/Focus Mode Pink */
+      --theme-color-glow: rgba(255, 0, 127, 0.4);
+      --theme-color-glow-light: rgba(255, 0, 127, 0.15);
+    }
+
+    /* Cyberpunk Scanline & CRT Screen Effect */
+    .crt-screen::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 255, 0, 0.06));
+      z-index: 20;
+      background-size: 100% 4px, 6px 100%;
+      pointer-events: none;
+    }
+
+    /* Grid Background */
+    .cyber-grid {
+      background-image: 
+        linear-gradient(rgba(31, 31, 46, 0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(31, 31, 46, 0.2) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+
+    /* Custom Tech Borders and Panels */
+    .cyber-panel {
+      position: relative;
+      border: 1px solid var(--theme-color);
+      box-shadow: 0 0 10px var(--theme-color-glow-light), inset 0 0 10px rgba(0, 0, 0, 0.8);
+      background: rgba(7, 7, 12, 0.85);
+      backdrop-filter: blur(10px);
+      transition: all 0.5s ease-in-out;
+    }
+    
+    .cyber-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 10px;
+      height: 10px;
+      border-top: 2px solid var(--theme-color);
+      border-left: 2px solid var(--theme-color);
+      pointer-events: none;
+    }
+
+    .cyber-panel::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 10px;
+      height: 10px;
+      border-bottom: 2px solid var(--theme-color);
+      border-right: 2px solid var(--theme-color);
+      pointer-events: none;
+    }
+
+    .cyber-header-corner {
+      clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 0 100%);
+    }
+
+    /* Animations */
+    @keyframes pulseGlow {
+      0% {
+        box-shadow: 0 0 5px var(--theme-color-glow-light), inset 0 0 5px rgba(0, 0, 0, 0.5);
+      }
+      100% {
+        box-shadow: 0 0 18px var(--theme-color-glow), inset 0 0 8px rgba(0, 0, 0, 0.7);
+      }
+    }
+
+    @keyframes scanline {
+      0% {
+        background-position: 0 0;
+      }
+      100% {
+        background-position: 0 100%;
+      }
+    }
+
+    @keyframes blink {
+      from, to { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .cursor-blink {
+      animation: blink 1s step-end infinite;
+    }
+
+    /* Theme colors references for elements */
+    .text-theme { color: var(--theme-color); }
+    .bg-theme { background-color: var(--theme-color); }
+    .border-theme { border-color: var(--theme-color); }
+    .glow-theme-text { text-shadow: 0 0 8px var(--theme-color-glow); }
+    .glow-theme-shadow { box-shadow: 0 0 15px var(--theme-color-glow); }
+
+    /* Custom Scrollbar for Terminal */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(13, 13, 21, 0.5);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: var(--theme-color);
+      border-radius: 2px;
+    }
+
+    /* Input Styling Override */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body class="bg-cyber-black text-slate-300 font-mono h-full flex items-center justify-center p-3 sm:p-6 overflow-x-hidden relative crt-screen">
+  
+  <!-- Cyber Background Layout -->
+  <div class="absolute inset-0 cyber-grid z-0 opacity-40 pointer-events-none"></div>
+  <!-- Scanning line simulation -->
+  <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,_rgba(0,0,0,0.12)_50%)] bg-[length:100%_8px] pointer-events-none z-10"></div>
+  
+  <div class="relative z-30 w-full max-w-5xl">
+    
+    <!-- Top Decorative Header HUD -->
+    <header class="w-full mb-6 flex flex-col sm:flex-row justify-between items-center border-b border-cyber-border pb-4 gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-3 h-3 bg-theme glow-theme-shadow rounded-full animate-ping"></div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-orbitron font-extrabold tracking-widest text-white flex items-center gap-2">
+            CYBER <span class="text-theme glow-theme-text" id="header-brand">POMODORO</span>
+          </h1>
+          <p class="text-[10px] text-slate-500 uppercase tracking-widest font-code mt-0.5">Focus Module v1.0.0 // Host Connected</p>
+        </div>
+      </div>
+      <!-- HUD System Status -->
+      <div class="flex items-center gap-4 text-xs">
+        <div class="bg-cyber-gray/80 border border-cyber-border px-3 py-1.5 rounded flex items-center gap-2">
+          <i data-lucide="shield" class="w-3.5 h-3.5 text-cyber-cyan"></i>
+          <span class="text-slate-400 font-code font-light">KEYBOARD SHORTCUTS: <kbd class="bg-cyber-card border border-cyber-border px-1 py-0.5 rounded text-[10px] text-white">SPACE</kbd></span>
+        </div>
+        <div class="bg-cyber-gray/80 border border-cyber-border px-3 py-1.5 rounded flex items-center gap-2">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-theme"></i>
+          <span class="font-code text-white uppercase" id="hud-mode-status">FOCUS</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Deck Dashboard -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+      
+      <!-- LEFT DECK: Clock, Timer, circular progress & Main Controls (7 cols) -->
+      <section class="md:col-span-7 flex flex-col gap-6">
+        
+        <!-- Main Timer Panel -->
+        <div class="cyber-panel p-6 sm:p-8 flex flex-col items-center justify-center animate-pulse-glow rounded-lg">
+          <!-- Cyber Corners and Labels -->
+          <div class="absolute top-2 left-3 text-[9px] text-slate-500 tracking-widest font-code">SYS.TIMER // ACTIVE_LNK</div>
+          <div class="absolute top-2 right-3 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyber-pink" id="status-dot-focus"></span>
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyber-green opacity-40" id="status-dot-short"></span>
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyber-cyan opacity-40" id="status-dot-long"></span>
+          </div>
+
+          <!-- Circular Progress & Timer Display -->
+          <div class="relative flex items-center justify-center my-6">
+            <!-- SVG Progress Circle -->
+            <svg class="w-64 h-64 sm:w-72 sm:h-72 transform -rotate-90" viewBox="0 0 200 200">
+              <!-- Background Circle Track -->
+              <circle cx="100" cy="100" r="88" fill="none" stroke="#0e0e16" stroke-width="6" />
+              <!-- Running Circular Pip Markers (Subtle Cyber Detailing) -->
+              <circle cx="100" cy="100" r="88" fill="none" stroke="#1f1f2e" stroke-width="2" stroke-dasharray="2 12" />
+              <!-- Foreground Progress Line -->
+              <circle id="progress-ring" cx="100" cy="100" r="88" fill="none" 
+                      class="progress-ring-circle transition-all duration-300 ease-linear" 
+                      stroke-width="7" 
+                      stroke-dasharray="552.92" 
+                      stroke-dashoffset="0" 
+                      stroke-linecap="round" />
+            </svg>
+
+            <!-- Digital Count Down & Status Monospace -->
+            <div class="absolute flex flex-col items-center justify-center text-center">
+              <span class="text-[11px] text-slate-500 uppercase tracking-widest font-code mb-1" id="timer-state-label">FOCUS ACTIVE</span>
+              <div class="text-4xl sm:text-5xl font-orbitron font-black tracking-widest text-white select-all glow-theme-text font-black" id="timer-display">
+                25:00
+              </div>
+              <!-- Small Clock Milliseconds simulation to look high-tech -->
+              <div class="text-[10px] text-slate-500 font-mono tracking-widest mt-1">
+                CYCLE: <span id="cycle-count" class="text-white">01</span> / <span id="target-cycles" class="text-slate-400">04</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mode Quick-Selector Tabs -->
+          <div class="w-full grid grid-cols-3 gap-2 mb-6 max-w-md">
+            <button onclick="switchMode('focus')" id="tab-focus" class="py-2 px-1 text-xs border border-cyber-pink bg-cyber-pink/5 hover:bg-cyber-pink/15 text-cyber-pink uppercase font-mono tracking-wider font-semibold transition-all duration-300 shadow-sm rounded">
+              Focus (25m)
+            </button>
+            <button onclick="switchMode('shortBreak')" id="tab-shortBreak" class="py-2 px-1 text-xs border border-cyber-border hover:border-cyber-green text-slate-400 hover:text-cyber-green uppercase font-mono tracking-wider transition-all duration-300 rounded">
+              Short Break
+            </button>
+            <button onclick="switchMode('longBreak')" id="tab-longBreak" class="py-2 px-1 text-xs border border-cyber-border hover:border-cyber-cyan text-slate-400 hover:text-cyber-cyan uppercase font-mono tracking-wider transition-all duration-300 rounded">
+              Long Break
+            </button>
+          </div>
+
+          <!-- Round Progress Indicators (Cyber Pips) -->
+          <div class="flex items-center gap-3 mb-6" id="cyber-pips-container">
+            <!-- Pips will be populated by JS -->
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-slate-500 tracking-wider font-code mr-1">SESSION PIP:</span>
+              <div id="pips-row" class="flex gap-2">
+                <!-- Javascript will inject glowing pips here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Controls Action Deck -->
+          <div class="w-full flex justify-center items-center gap-4 sm:gap-6">
+            <!-- Reset Button -->
+            <button onclick="resetTimer()" class="group relative py-3 px-6 bg-cyber-gray border border-cyber-border hover:border-white text-slate-400 hover:text-white transition-all duration-300 uppercase tracking-widest text-xs flex items-center gap-2 rounded">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 group-hover:rotate-45 transition-transform duration-300"></i>
+              Reset
+            </button>
+
+            <!-- Play / Pause Button (Large Main Trigger) -->
+            <button onclick="toggleTimer()" id="btn-play-pause" class="relative py-3 px-8 bg-theme border border-theme text-black font-extrabold hover:bg-transparent text-xs tracking-widest transition-all duration-300 uppercase flex items-center gap-2 rounded shadow-theme overflow-hidden">
+              <!-- Inline background overlay effect -->
+              <span class="absolute inset-0 bg-white/10 translate-y-full hover:translate-y-0 transition-transform duration-300"></span>
+              <span class="relative flex items-center gap-2 text-black hover:text-white transition-colors duration-300" id="play-pause-content">
+                <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                Start Focus
+              </span>
+            </button>
+
+            <!-- Settings Toggle -->
+            <button onclick="toggleSetupPanel()" id="btn-setup-toggle" class="py-3 px-6 bg-cyber-gray border border-cyber-border hover:border-theme text-slate-400 hover:text-theme transition-all duration-300 uppercase tracking-widest text-xs flex items-center gap-2 rounded">
+              <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+              Setup
+            </button>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- RIGHT DECK: Terminal, Audio, Setup (5 cols) -->
+      <section class="md:col-span-5 flex flex-col gap-6">
+
+        <!-- Custom Setup Panel (Collapsible Container) -->
+        <div id="setup-panel" class="cyber-panel p-6 rounded-lg transition-all duration-500 overflow-hidden max-h-[500px]">
+          <div class="absolute top-2 left-3 text-[9px] text-slate-500 tracking-widest font-code">CFG.SETUP // CONTROL_DECK</div>
+          
+          <h2 class="text-sm font-orbitron font-extrabold tracking-widest text-white border-b border-cyber-border pb-2 mb-4 uppercase flex items-center gap-2">
+            <i data-lucide="sliders" class="w-4 h-4 text-theme"></i> Custom Setup
+          </h2>
+          
+          <div class="flex flex-col gap-3 mb-4">
+            <!-- Focus duration -->
+            <div class="grid grid-cols-12 gap-3 items-center">
+              <label class="col-span-4 text-[11px] text-slate-400 uppercase font-code">Focus Session</label>
+              <div class="col-span-4 flex items-center bg-cyber-black border border-cyber-border rounded px-2 focus-within:border-theme">
+                <input type="number" id="input-focus-min" min="0" max="180" value="25" class="bg-transparent text-white font-mono text-xs py-1.5 w-full focus:outline-none placeholder-slate-600">
+                <span class="text-[9px] text-slate-500 font-code ml-1">MIN</span>
+              </div>
+              <div class="col-span-4 flex items-center bg-cyber-black border border-cyber-border rounded px-2 focus-within:border-theme">
+                <input type="number" id="input-focus-sec" min="0" max="59" value="0" class="bg-transparent text-white font-mono text-xs py-1.5 w-full focus:outline-none placeholder-slate-600">
+                <span class="text-[9px] text-slate-500 font-code ml-1">SEC</span>
+              </div>
+            </div>
+            <!-- Short break -->
+            <div class="grid grid-cols-12 gap-3 items-center">
+              <label class="col-span-4 text-[11px] text-slate-400 uppercase font-code">Short Break</label>
+              <div class="col-span-4 flex items-center bg-cyber-black border border-cyber-border rounded px-2 focus-within:border-theme">
+                <input type="number" id="input-short-min" min="0" max="60" value="5" class="bg-transparent text-white font-mono text-xs py-1.5 w-full focus:outline-none placeholder-slate-600">
+                <span class="text-[9px] text-slate-500 font-code ml-1">MIN</span>
+              </div>
+              <div class="col-span-4 flex items-center bg-cyber-black border border-cyber-border rounded px-2 focus-within:border-theme">
+                <input type="number" id="input-short-sec" min="0" max="59" value="0" class="bg-transparent text-white font-mono text-xs py-1.5 w-full focus:outline-none placeholder-slate-600">
+                <span class="text-[9px] text-slate-500 font-code ml-1">SEC</span>
+              </div>
+            </div>
+            <!-- Long break -->
+            <div class="grid grid-cols-12 gap-3 items-center">
+              <label class="col-span-4 text-[11px] text-slate-400 uppercase font-code">Long Break</label>
+              <div class="col-span-4 flex items-center bg-cyber-black border border-cyber-border rounded px-2 focus-within:border-theme">
+                <input type="number" id="input-long-min" min="0" max="120" value="15" class="bg-transparent text-white font-mono text-xs py-1.5 w-full focus:outline-none placeholder-slate-600">
+                <span class="text-[9px] text-slate-500 font-code ml-1">MIN</span>
+              </div>
+              <div class="col-span-4 flex items-center bg-cyber-black border border-cyber-border rounded px-2 focus-within:border-theme">
+                <input type="number" id="input-long-sec" min="0" max="59" value="0" class="bg-transparent text-white font-mono text-xs py-1.5 w-full focus:outline-none placeholder-slate-600">
+                <span class="text-[9px] text-slate-500 font-code ml-1">SEC</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <!-- Target rounds -->
+            <div>
+              <label class="text-[10px] text-slate-500 uppercase font-code mb-1">Rounds Goal</label>
+              <div class="flex items-center bg-cyber-black border border-cyber-border rounded px-2 focus-within:border-theme">
+                <input type="number" id="input-rounds" min="1" max="12" value="4" class="bg-transparent text-white font-mono text-sm py-1.5 w-full focus:outline-none">
+              </div>
+            </div>
+            <!-- Auto switch settings -->
+            <div class="flex flex-col justify-end">
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none text-[11px] text-slate-400 py-2">
+                <input type="checkbox" id="check-auto" checked class="sr-only peer">
+                <div class="w-9 h-5 bg-cyber-gray border border-cyber-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-500 peer-checked:after:bg-theme after:border-slate-500 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-theme/20 peer-checked:border-theme relative"></div>
+                Auto-next
+              </label>
+            </div>
+          </div>
+
+          <!-- Save Trigger -->
+          <button onclick="applySetupChanges()" class="w-full py-2 bg-cyber-gray border border-cyber-border hover:border-theme text-xs font-mono uppercase text-white hover:text-theme tracking-widest transition-all duration-300 rounded">
+            Apply Configuration
+          </button>
+        </div>
+
+        <!-- Audio Engine Panel -->
+        <div class="cyber-panel p-6 rounded-lg">
+          <div class="absolute top-2 left-3 text-[9px] text-slate-500 tracking-widest font-code">AUDIO.SYNTH // CHIP_FREQ</div>
+          
+          <h2 class="text-sm font-orbitron font-extrabold tracking-widest text-white border-b border-cyber-border pb-2 mb-4 uppercase flex items-center gap-2">
+            <i data-lucide="music" class="w-4 h-4 text-theme"></i> Synthesizer Node
+          </h2>
+
+          <div class="flex flex-col gap-3">
+            <!-- Audio Output Profile Selector -->
+            <div class="flex flex-col">
+              <label class="text-[10px] text-slate-500 uppercase font-code mb-1">Synthesizer Oscillator Preset</label>
+              <select id="select-synth-profile" class="bg-cyber-black text-xs text-white border border-cyber-border rounded px-2.5 py-1.5 focus:outline-none focus:border-theme font-mono">
+                <option value="arpeggio" selected>Chiptune Arpeggio (8-Bit Retro Sci-Fi)</option>
+                <option value="sweep">Laser Frequency Sweep (Cyber Alert)</option>
+                <option value="double-beep">Dual Sawtooth Beeps (Retro Warning)</option>
+              </select>
+            </div>
+
+            <!-- Volume Slider Node -->
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-[10px] text-slate-500 uppercase font-code">Master Output Volume</span>
+                <span class="text-xs text-theme font-mono" id="volume-val-display">50%</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <i data-lucide="volume-1" class="w-4 h-4 text-slate-500"></i>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5" 
+                       class="w-full accent-theme bg-cyber-gray border border-cyber-border h-1.5 rounded-lg appearance-none cursor-pointer"
+                       oninput="handleVolumeChange(this.value)">
+                <i data-lucide="volume-2" class="w-4 h-4 text-theme"></i>
+              </div>
+            </div>
+
+            <!-- Test Synth Note Trigger -->
+            <button onclick="testSynth()" class="py-1.5 px-3 border border-cyber-border hover:border-theme text-[11px] text-slate-400 hover:text-theme flex items-center justify-center gap-1.5 rounded font-mono uppercase tracking-wide transition-all duration-300">
+              <i data-lucide="play-circle" class="w-3.5 h-3.5"></i>
+              Test Synth Waveform
+            </button>
+          </div>
+        </div>
+
+        <!-- Terminal Command Log (CRT Monitor Style) -->
+        <div class="cyber-panel p-4 rounded-lg bg-black/90 border-theme flex flex-col justify-between" style="box-shadow: 0 0 15px rgba(var(--theme-color-glow), 0.2)">
+          <div class="absolute top-2 left-3 text-[9px] text-slate-500 tracking-widest font-code">DECK.TERM // CLI_SHELL</div>
+          <div class="absolute top-2 right-3 text-[9px] text-cyber-green tracking-widest font-code animate-pulse">● LOG_ONLINE</div>
+
+          <div class="flex items-center border-b border-cyber-border pb-1.5 mb-2 mt-2">
+            <i data-lucide="terminal" class="w-3.5 h-3.5 text-cyber-green mr-1.5"></i>
+            <span class="text-xs text-cyber-green font-mono uppercase tracking-widest font-semibold">Interactive Focus Log</span>
+          </div>
+
+          <!-- Log Content Area -->
+          <div id="terminal-log" class="text-[11px] text-emerald-400/90 font-code overflow-y-auto h-40 custom-scrollbar flex flex-col gap-1 pr-1">
+            <!-- Seed messages will load here -->
+          </div>
+
+          <!-- Terminal Input Console -->
+          <form id="terminal-form" class="mt-2 pt-2 border-t border-cyber-border flex items-center text-xs">
+            <span class="text-emerald-500 font-mono select-none mr-1.5">hacker@cyberdeck:~$</span>
+            <input type="text" id="terminal-input" 
+                   class="bg-transparent border-none outline-none text-emerald-400 flex-grow font-mono caret-emerald-500" 
+                   placeholder="type /help for system command list..." autocomplete="off">
+            <button type="submit" class="hidden"></button>
+          </form>
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- Bottom Footer Status / Help -->
+    <footer class="mt-8 pt-4 border-t border-cyber-border flex flex-col sm:flex-row justify-between text-[11px] text-slate-500 uppercase tracking-widest font-code gap-4">
+      <div class="flex flex-wrap gap-4 items-center">
+        <span>STATUS: SYSTEM COLD</span>
+        <span>•</span>
+        <span>BUFFER: CACHED</span>
+        <span>•</span>
+        <span>Shortcuts: [Space] Play/Pause | [R] Reset</span>
+      </div>
+      <div>
+        <span>Design: Cyber Deck v1.0</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    // State Variables
+    let timerState = {
+      mode: 'focus', // focus, shortBreak, longBreak
+      durations: {
+        focus: 25 * 60, // in seconds
+        shortBreak: 5 * 60,
+        longBreak: 15 * 60
+      },
+      remainingTime: 25 * 60, // current remaining seconds
+      isRunning: false,
+      cycleCount: 1,
+      targetCycles: 4,
+      autoNext: true,
+      soundProfile: 'arpeggio',
+      volume: 0.5
+    };
+
+    let timerInterval = null;
+    let endTime = null; // target timestamp (Date.now() + ms)
+    let isPanelOpen = false;
+
+    // Theme Configs
+    const themes = {
+      focus: {
+        color: '#ff007f', // Cyber Pink
+        glow: 'rgba(255, 0, 127, 0.4)',
+        glowLight: 'rgba(255, 0, 127, 0.15)',
+        label: 'FOCUS ACTIVE',
+        hudText: 'FOCUSING',
+        brandText: 'FOCUS_DECK'
+      },
+      shortBreak: {
+        color: '#39ff14', // Cyber Green
+        glow: 'rgba(57, 255, 20, 0.4)',
+        glowLight: 'rgba(57, 255, 20, 0.15)',
+        label: 'SHORT BREAK ACTIVE',
+        hudText: 'CHILLING',
+        brandText: 'RELAX_PORT'
+      },
+      longBreak: {
+        color: '#00f0ff', // Cyber Cyan
+        glow: 'rgba(0, 240, 255, 0.4)',
+        glowLight: 'rgba(0, 240, 255, 0.15)',
+        label: 'LONG BREAK ACTIVE',
+        hudText: 'COMPACTING',
+        brandText: 'DEEP_CHILL'
+      }
+    };
+
+    // Load configurations from localStorage if exists
+    function loadSavedState() {
+      const saved = localStorage.getItem('cyber_pomodoro_settings');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          
+          // Backwards compatibility: load focusSeconds/Minutes
+          const focusDuration = parsed.focusSeconds !== undefined ? parsed.focusSeconds : (parsed.focusMinutes || 25) * 60;
+          const shortDuration = parsed.shortSeconds !== undefined ? parsed.shortSeconds : (parsed.shortMinutes || 5) * 60;
+          const longDuration = parsed.longSeconds !== undefined ? parsed.longSeconds : (parsed.longMinutes || 15) * 60;
+
+          timerState.durations.focus = focusDuration;
+          timerState.durations.shortBreak = shortDuration;
+          timerState.durations.longBreak = longDuration;
+          timerState.targetCycles = parsed.targetCycles || 4;
+          timerState.autoNext = parsed.autoNext !== undefined ? parsed.autoNext : true;
+          timerState.soundProfile = parsed.soundProfile || 'arpeggio';
+          timerState.volume = parsed.volume !== undefined ? parseFloat(parsed.volume) : 0.5;
+
+          // Hydrate forms
+          document.getElementById('input-focus-min').value = Math.floor(focusDuration / 60);
+          document.getElementById('input-focus-sec').value = focusDuration % 60;
+          document.getElementById('input-short-min').value = Math.floor(shortDuration / 60);
+          document.getElementById('input-short-sec').value = shortDuration % 60;
+          document.getElementById('input-long-min').value = Math.floor(longDuration / 60);
+          document.getElementById('input-long-sec').value = longDuration % 60;
+
+          document.getElementById('input-rounds').value = parsed.targetCycles || 4;
+          document.getElementById('check-auto').checked = timerState.autoNext;
+          document.getElementById('select-synth-profile').value = timerState.soundProfile;
+          document.getElementById('volume-slider').value = timerState.volume;
+          document.getElementById('volume-val-display').innerText = Math.round(timerState.volume * 100) + '%';
+        } catch(e) {
+          console.error("Failed to load local settings", e);
+        }
+      }
+      
+      // Default set remaining time to current mode's duration
+      timerState.remainingTime = timerState.durations[timerState.mode];
+    }
+
+    // Audio Context & Synth Logic
+    let audioCtx = null;
+    let volumeNode = null;
+
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        volumeNode = audioCtx.createGain();
+        volumeNode.gain.setValueAtTime(timerState.volume, audioCtx.currentTime);
+        volumeNode.connect(audioCtx.destination);
+      } catch (err) {
+        writeLog("AUDIO ERROR", "Failed to initialize Web Audio engine.");
+      }
+    }
+
+    function handleVolumeChange(value) {
+      const vol = parseFloat(value);
+      timerState.volume = vol;
+      document.getElementById('volume-val-display').innerText = Math.round(vol * 100) + '%';
+      if (audioCtx) {
+        volumeNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+      }
+      // Save setting
+      saveSettingsToStorage();
+    }
+
+    // Web Audio Synthesizer Presets
+    let activeOscillators = [];
+
+    function stopAllSounds() {
+      activeOscillators.forEach(osc => {
+        try {
+          osc.stop();
+        } catch(e) {}
+      });
+      activeOscillators = [];
+    }
+
+    function playAlertSound() {
+      stopAllSounds(); // Stop any currently playing alert first
+      initAudio();
+      if (!audioCtx) return;
+
+      // Resume context if suspended (browser security)
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      const type = timerState.soundProfile;
+      const now = audioCtx.currentTime;
+
+      if (type === 'arpeggio') {
+        // Chiptune upward arpeggio repeated 8 times (~4.8 seconds)
+        const notes = [329.63, 392.00, 523.25, 659.25, 783.99, 1046.50]; // E4, G4, C5, E5, G5, C6
+        const noteDur = 0.07;
+        const patternDur = 0.6;
+        const repeatCount = 8;
+        
+        for (let loop = 0; loop < repeatCount; loop++) {
+          const patternStart = now + loop * patternDur;
+          notes.forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = (i % 2 === 0) ? 'square' : 'triangle';
+            osc.frequency.setValueAtTime(freq, patternStart + i * noteDur);
+            
+            gain.gain.setValueAtTime(0, patternStart + i * noteDur);
+            gain.gain.linearRampToValueAtTime(0.18, patternStart + i * noteDur + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, patternStart + i * noteDur + noteDur);
+            
+            osc.connect(gain);
+            gain.connect(volumeNode);
+            osc.start(patternStart + i * noteDur);
+            osc.stop(patternStart + i * noteDur + noteDur);
+            activeOscillators.push(osc);
+          });
+        }
+      } else if (type === 'sweep') {
+        // Sci-Fi laser frequency sweep repeated 10 times (5.0 seconds)
+        const sweepDur = 0.5;
+        const repeatCount = 10;
+        
+        for (let loop = 0; loop < repeatCount; loop++) {
+          const sweepStart = now + loop * sweepDur;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(1200, sweepStart);
+          osc.frequency.exponentialRampToValueAtTime(150, sweepStart + 0.45);
+          
+          gain.gain.setValueAtTime(0.2, sweepStart);
+          gain.gain.exponentialRampToValueAtTime(0.001, sweepStart + 0.45);
+          
+          osc.connect(gain);
+          gain.connect(volumeNode);
+          osc.start(sweepStart);
+          osc.stop(sweepStart + 0.45);
+          activeOscillators.push(osc);
+        }
+      } else if (type === 'double-beep') {
+        // Dual short retro warning beeps repeated 6 times (~4.8 seconds)
+        const patternDur = 0.8;
+        const repeatCount = 6;
+        
+        for (let loop = 0; loop < repeatCount; loop++) {
+          const patternStart = now + loop * patternDur;
+          [0, 0.2].forEach((delay) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, patternStart + delay);
+            
+            gain.gain.setValueAtTime(0.2, patternStart + delay);
+            gain.gain.exponentialRampToValueAtTime(0.001, patternStart + delay + 0.15);
+            
+            osc.connect(gain);
+            gain.connect(volumeNode);
+            osc.start(patternStart + delay);
+            osc.stop(patternStart + delay + 0.15);
+            activeOscillators.push(osc);
+          });
+        }
+      }
+    }
+
+    function testSynth() {
+      initAudio();
+      if (!audioCtx) return;
+      
+      // Update from select
+      timerState.soundProfile = document.getElementById('select-synth-profile').value;
+      
+      writeLog("AUDIO", `Testing synthesizer preset [${timerState.soundProfile.toUpperCase()}]`);
+      playAlertSound();
+    }
+
+    // UI Updates
+    function updateThemeStyles(mode) {
+      const theme = themes[mode];
+      // Inject root variables
+      document.documentElement.style.setProperty('--theme-color', theme.color);
+      document.documentElement.style.setProperty('--theme-color-glow', theme.glow);
+      document.documentElement.style.setProperty('--theme-color-glow-light', theme.glowLight);
+
+      // HUD & Header Texts
+      document.getElementById('hud-mode-status').innerText = theme.hudText;
+      document.getElementById('header-brand').innerText = theme.brandText;
+      document.getElementById('timer-state-label').innerText = theme.label;
+
+      // Status Indicators Glow/Ping Styles
+      const indicators = {
+        focus: document.getElementById('status-dot-focus'),
+        shortBreak: document.getElementById('status-dot-short'),
+        longBreak: document.getElementById('status-dot-long')
+      };
+      
+      // Clear indicators
+      Object.keys(indicators).forEach(key => {
+        indicators[key].classList.add('opacity-40');
+        indicators[key].classList.remove('animate-ping');
+      });
+      // Active indicator
+      indicators[mode].classList.remove('opacity-40');
+      indicators[mode].classList.add('animate-ping');
+
+      // Update Quick Tab Selections
+      const tabs = {
+        focus: document.getElementById('tab-focus'),
+        shortBreak: document.getElementById('tab-shortBreak'),
+        longBreak: document.getElementById('tab-longBreak')
+      };
+
+      Object.keys(tabs).forEach(key => {
+        const tabEl = tabs[key];
+        tabEl.className = "py-2 px-1 text-xs border uppercase font-mono tracking-wider transition-all duration-300 rounded";
+        if (key === mode) {
+          // Highlight active mode color
+          if (mode === 'focus') {
+            tabEl.classList.add('border-cyber-pink', 'bg-cyber-pink/10', 'text-cyber-pink', 'font-semibold');
+          } else if (mode === 'shortBreak') {
+            tabEl.classList.add('border-cyber-green', 'bg-cyber-green/10', 'text-cyber-green', 'font-semibold');
+          } else if (mode === 'longBreak') {
+            tabEl.classList.add('border-cyber-cyan', 'bg-cyber-cyan/10', 'text-cyber-cyan', 'font-semibold');
+          }
+        } else {
+          tabEl.classList.add('border-cyber-border', 'text-slate-400');
+          // Add custom hover colors
+          if (key === 'focus') tabEl.classList.add('hover:border-cyber-pink', 'hover:text-cyber-pink');
+          if (key === 'shortBreak') tabEl.classList.add('hover:border-cyber-green', 'hover:text-cyber-green');
+          if (key === 'longBreak') tabEl.classList.add('hover:border-cyber-cyan', 'hover:text-cyber-cyan');
+        }
+      });
+
+      // Update start button text color & glow according to active theme
+      const btnPlay = document.getElementById('btn-play-pause');
+      if (btnPlay) {
+        btnPlay.style.borderColor = theme.color;
+        if (timerState.isRunning) {
+          btnPlay.style.backgroundColor = 'transparent';
+          btnPlay.style.color = theme.color;
+        } else {
+          btnPlay.style.backgroundColor = theme.color;
+          btnPlay.style.color = '#000';
+        }
+      }
+    }
+
+    function updatePipsDisplay() {
+      const pipsRow = document.getElementById('pips-row');
+      pipsRow.innerHTML = '';
+      
+      const target = timerState.targetCycles;
+      const current = timerState.cycleCount;
+
+      for (let i = 1; i <= target; i++) {
+        const pip = document.createElement('div');
+        // styling base
+        pip.className = 'w-3 h-3 border transition-all duration-300';
+        
+        if (i < current) {
+          // Completed cycles
+          pip.style.borderColor = '#ff007f';
+          pip.style.backgroundColor = '#ff007f';
+          pip.style.boxShadow = '0 0 8px rgba(255, 0, 127, 0.7)';
+        } else if (i === current && timerState.mode === 'focus') {
+          // Current active cycle
+          pip.style.borderColor = '#ff007f';
+          pip.style.backgroundColor = 'transparent';
+          pip.classList.add('animate-pulse');
+        } else {
+          // Empty slots
+          pip.style.borderColor = '#1f1f2e';
+          pip.style.backgroundColor = 'transparent';
+        }
+        
+        pipsRow.appendChild(pip);
+      }
+      
+      document.getElementById('cycle-count').innerText = String(current).padStart(2, '0');
+      document.getElementById('target-cycles').innerText = String(target).padStart(2, '0');
+    }
+
+    function updateUI() {
+      // Time displays
+      const mins = Math.floor(timerState.remainingTime / 60);
+      const secs = timerState.remainingTime % 60;
+      const displayStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      
+      document.getElementById('timer-display').innerText = displayStr;
+      document.title = `(${displayStr}) Cyber Pomodoro`;
+
+      // Circular Ring fill percentage
+      const progressRing = document.getElementById('progress-ring');
+      const maxDuration = timerState.durations[timerState.mode];
+      const percent = maxDuration > 0 ? (timerState.remainingTime / maxDuration) : 0;
+      
+      // Circumference = 2 * PI * 88 = 552.92
+      const circumference = 552.92;
+      const offset = circumference * (1 - percent);
+      progressRing.style.strokeDashoffset = offset;
+      
+      // Update Play/Pause button icons
+      const playPauseContent = document.getElementById('play-pause-content');
+      if (timerState.isRunning) {
+        playPauseContent.innerHTML = `<i data-lucide="pause" class="w-4 h-4 fill-current"></i> Pause Focus`;
+      } else {
+        const modeLabel = timerState.mode === 'focus' ? 'Start Focus' : (timerState.mode === 'shortBreak' ? 'Start Break' : 'Start Long Break');
+        playPauseContent.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-current"></i> ${modeLabel}`;
+      }
+      lucide.createIcons();
+
+      // Ensure button colors matches running state
+      const theme = themes[timerState.mode];
+      const btnPlay = document.getElementById('btn-play-pause');
+      if (btnPlay) {
+        if (timerState.isRunning) {
+          btnPlay.style.backgroundColor = 'transparent';
+          btnPlay.style.color = theme.color;
+        } else {
+          btnPlay.style.backgroundColor = theme.color;
+          btnPlay.style.color = '#000';
+        }
+      }
+    }
+
+    // Terminal Logger
+    function writeLog(source, message) {
+      const logArea = document.getElementById('terminal-log');
+      
+      const now = new Date();
+      const timeStr = `[${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}]`;
+      
+      const logLine = document.createElement('div');
+      logLine.className = 'leading-relaxed font-code flex items-start gap-1 select-text';
+      
+      let sourceSpan = '';
+      if (source === 'SYSTEM' || source === 'SYS') {
+        sourceSpan = `<span class="text-emerald-500 font-bold shrink-0">${source}:</span>`;
+      } else if (source === 'USER') {
+        sourceSpan = `<span class="text-cyan-400 font-bold shrink-0">${source}:</span>`;
+      } else if (source === 'AUDIO' || source === 'CONFIG') {
+        sourceSpan = `<span class="text-yellow-400 font-bold shrink-0">${source}:</span>`;
+      } else {
+        sourceSpan = `<span class="text-cyber-pink font-bold shrink-0">${source}:</span>`;
+      }
+
+      logLine.innerHTML = `<span class="text-emerald-700 select-none shrink-0">${timeStr}</span> ${sourceSpan} <span class="text-emerald-300 break-all">${message}</span>`;
+      logArea.appendChild(logLine);
+      
+      // Auto Scroll
+      logArea.scrollTop = logArea.scrollHeight;
+    }
+
+    // Timer Controls
+    function toggleTimer() {
+      // Lazy init Audio context on first user interaction
+      initAudio();
+
+      if (timerState.isRunning) {
+        pauseTimer();
+      } else {
+        startTimer();
+      }
+    }
+
+    function startTimer() {
+      if (timerState.isRunning) return;
+      stopAllSounds();
+      
+      timerState.isRunning = true;
+      // Precise timer using target timestamp to prevent background throttle drift
+      endTime = Date.now() + (timerState.remainingTime * 1000);
+      
+      timerInterval = setInterval(() => {
+        const now = Date.now();
+        const diff = Math.max(0, Math.round((endTime - now) / 1000));
+        timerState.remainingTime = diff;
+        updateUI();
+
+        if (timerState.remainingTime <= 0) {
+          clearInterval(timerInterval);
+          handleSessionEnd();
+        }
+      }, 100);
+
+      writeLog("SYSTEM", `${timerState.mode.toUpperCase()} Timer Initiated.`);
+      updateUI();
+    }
+
+    function pauseTimer() {
+      if (!timerState.isRunning) return;
+      stopAllSounds();
+      
+      timerState.isRunning = false;
+      clearInterval(timerInterval);
+      
+      writeLog("SYSTEM", `Session Paused. Remaining: ${Math.floor(timerState.remainingTime / 60)}m ${timerState.remainingTime % 60}s`);
+      updateUI();
+    }
+
+    function resetTimer() {
+      const wasRunning = timerState.isRunning;
+      timerState.isRunning = false;
+      clearInterval(timerInterval);
+      stopAllSounds();
+      
+      timerState.remainingTime = timerState.durations[timerState.mode];
+      
+      writeLog("SYSTEM", `Reset command sent. Timer reloaded for ${timerState.mode.toUpperCase()} (${Math.floor(timerState.remainingTime / 60)}m).`);
+      
+      updateUI();
+      updatePipsDisplay();
+    }
+
+    function switchMode(newMode) {
+      if (timerState.mode === newMode && !timerState.isRunning) return;
+      
+      timerState.isRunning = false;
+      clearInterval(timerInterval);
+      stopAllSounds();
+      
+      timerState.mode = newMode;
+      timerState.remainingTime = timerState.durations[newMode];
+      
+      writeThemeStyles(newMode);
+      updatePipsDisplay();
+      updateUI();
+      
+      writeLog("SYSTEM", `Switching terminal to mode: ${newMode.toUpperCase()}. Duration: ${Math.floor(timerState.remainingTime / 60)}m.`);
+    }
+
+    function handleSessionEnd() {
+      timerState.isRunning = false;
+      clearInterval(timerInterval);
+      
+      writeLog("SYSTEM", `Session limit achieved. Triggering alert synth.`);
+      playAlertSound();
+
+      // Loop Logic
+      if (timerState.mode === 'focus') {
+        writeLog("SYSTEM", `Focus cycle [${timerState.cycleCount}/${timerState.targetCycles}] completed successfully.`);
+        
+        if (timerState.cycleCount >= timerState.targetCycles) {
+          // Met target, long break time
+          writeLog("SYSTEM", `Cycle goals met. Commencing Long Break transition.`);
+          timerState.cycleCount = 1; // Reset count
+          switchMode('longBreak');
+        } else {
+          // Increment focus cycle and take short break
+          timerState.cycleCount++;
+          writeLog("SYSTEM", `Incrementing cycle. Commencing Short Break transition.`);
+          switchMode('shortBreak');
+        }
+      } else {
+        // Just finished break, switch back to work
+        writeLog("SYSTEM", `Break complete. Returning to Work/Focus loop.`);
+        switchMode('focus');
+      }
+
+      // Auto start next if enabled
+      if (timerState.autoNext) {
+        setTimeout(() => {
+          startTimer();
+        }, 1500); // 1.5s delay for audio playback buffer
+      }
+    }
+
+    // Toggle custom panel
+    function toggleSetupPanel() {
+      const panel = document.getElementById('setup-panel');
+      const btn = document.getElementById('btn-setup-toggle');
+      if (isPanelOpen) {
+        panel.style.maxHeight = '0px';
+        panel.style.padding = '0px 1.5rem';
+        panel.style.borderWidth = '0px';
+        btn.classList.remove('border-theme', 'text-theme');
+        isPanelOpen = false;
+      } else {
+        panel.style.maxHeight = '500px';
+        panel.style.padding = '1.5rem';
+        panel.style.borderWidth = '1px';
+        btn.classList.add('border-theme', 'text-theme');
+        isPanelOpen = true;
+      }
+    }
+
+    function saveSettingsToStorage() {
+      const data = {
+        focusSeconds: timerState.durations.focus,
+        shortSeconds: timerState.durations.shortBreak,
+        longSeconds: timerState.durations.longBreak,
+        targetCycles: timerState.targetCycles,
+        autoNext: timerState.autoNext,
+        soundProfile: timerState.soundProfile,
+        volume: timerState.volume
+      };
+      localStorage.setItem('cyber_pomodoro_settings', JSON.stringify(data));
+    }
+
+    function applySetupChanges() {
+      const focusMin = Math.max(0, parseInt(document.getElementById('input-focus-min').value) || 0);
+      const focusSec = Math.max(0, Math.min(59, parseInt(document.getElementById('input-focus-sec').value) || 0));
+      const shortMin = Math.max(0, parseInt(document.getElementById('input-short-min').value) || 0);
+      const shortSec = Math.max(0, Math.min(59, parseInt(document.getElementById('input-short-sec').value) || 0));
+      const longMin = Math.max(0, parseInt(document.getElementById('input-long-min').value) || 0);
+      const longSec = Math.max(0, Math.min(59, parseInt(document.getElementById('input-long-sec').value) || 0));
+
+      const rounds = Math.max(1, parseInt(document.getElementById('input-rounds').value) || 4);
+      const auto = document.getElementById('check-auto').checked;
+
+      // Make sure at least 1 second total is set
+      const focusTotal = Math.max(1, (focusMin * 60) + focusSec);
+      const shortTotal = Math.max(1, (shortMin * 60) + shortSec);
+      const longTotal = Math.max(1, (longMin * 60) + longSec);
+
+      const oldDuration = timerState.durations[timerState.mode];
+
+      timerState.durations.focus = focusTotal;
+      timerState.durations.shortBreak = shortTotal;
+      timerState.durations.longBreak = longTotal;
+      timerState.targetCycles = rounds;
+      timerState.autoNext = auto;
+
+      const newDuration = timerState.durations[timerState.mode];
+
+      // Update remaining time if active mode duration changed, or if it is currently not running
+      if (oldDuration !== newDuration || !timerState.isRunning) {
+        timerState.remainingTime = newDuration;
+        if (timerState.isRunning) {
+          endTime = Date.now() + (timerState.remainingTime * 1000);
+        }
+      }
+
+      writeLog("CONFIG", `New parameters loaded. Focus: ${focusMin}m ${focusSec}s | Short: ${shortMin}m ${shortSec}s | Long: ${longMin}m ${longSec}s`);
+      
+      updateUI();
+      updatePipsDisplay();
+      saveSettingsToStorage();
+      toggleSetupPanel(); // collapse
+    }
+
+    // Terminal Commands Parser
+    function handleTerminalCommand(text) {
+      writeLog("USER", text);
+      const tokens = text.toLowerCase().split(' ');
+      const cmd = tokens[0];
+
+      switch(cmd) {
+        case '/help':
+          writeLog("SYS", "Available Commands:<br>" +
+                        "  <span class='text-white'>/start</span> : Start current timer<br>" +
+                        "  <span class='text-white'>/pause</span> : Pause current timer<br>" +
+                        "  <span class='text-white'>/reset</span> : Reset active timer<br>" +
+                        "  <span class='text-white'>/mode [focus|short|long]</span> : Set timer state<br>" +
+                        "  <span class='text-white'>/time [mins]</span> : Set current duration & reset<br>" +
+                        "  <span class='text-white'>/volume [0-100]</span> : Set master synth volume<br>" +
+                        "  <span class='text-white'>/synth [arpeggio|sweep|double-beep]</span> : Set sound profile<br>" +
+                        "  <span class='text-white'>/clear</span> : Flush terminal cache");
+          break;
+
+        case '/start':
+          if (timerState.isRunning) {
+            writeLog("SYS", "ERROR: Core timer already running.");
+          } else {
+            startTimer();
+          }
+          break;
+
+        case '/pause':
+          if (!timerState.isRunning) {
+            writeLog("SYS", "ERROR: Core timer already offline.");
+          } else {
+            pauseTimer();
+          }
+          break;
+
+        case '/reset':
+          resetTimer();
+          break;
+
+        case '/clear':
+          document.getElementById('terminal-log').innerHTML = '';
+          writeLog("SYSTEM", "Terminal cache flushed.");
+          break;
+
+        case '/mode':
+          const targetMode = tokens[1];
+          if (targetMode === 'focus' || targetMode === 'work') {
+            switchMode('focus');
+          } else if (targetMode === 'short' || targetMode === 'break') {
+            switchMode('shortBreak');
+          } else if (targetMode === 'long' || targetMode === 'deep') {
+            switchMode('longBreak');
+          } else {
+            writeLog("SYS", "ERROR: Invalid mode. Supported: focus, short, long");
+          }
+          break;
+
+        case '/time':
+          const timeArg = tokens[1];
+          if (!timeArg) {
+            writeLog("SYS", "ERROR: Command syntax: /time [MM:SS | SSs | MM]");
+            break;
+          }
+
+          let totalSeconds = 0;
+          if (timeArg.includes(':')) {
+            const parts = timeArg.split(':');
+            const mins = parseInt(parts[0]) || 0;
+            const secs = parseInt(parts[1]) || 0;
+            if (mins < 0 || secs < 0 || secs > 59) {
+              writeLog("SYS", "ERROR: Invalid time format. SEC must be 0-59.");
+              break;
+            }
+            totalSeconds = (mins * 60) + secs;
+          } else if (timeArg.endsWith('s')) {
+            const secs = parseInt(timeArg.slice(0, -1)) || 0;
+            if (secs <= 0) {
+              writeLog("SYS", "ERROR: Seconds must be a positive integer.");
+              break;
+            }
+            totalSeconds = secs;
+          } else {
+            const mins = parseInt(timeArg) || 0;
+            if (mins <= 0) {
+              writeLog("SYS", "ERROR: Minutes must be a positive integer.");
+              break;
+            }
+            totalSeconds = mins * 60;
+          }
+
+          if (totalSeconds < 1) {
+            writeLog("SYS", "ERROR: Duration must be at least 1 second.");
+          } else {
+            // Apply immediately to current mode
+            timerState.durations[timerState.mode] = totalSeconds;
+            timerState.remainingTime = totalSeconds;
+            if (timerState.isRunning) {
+              endTime = Date.now() + (timerState.remainingTime * 1000);
+            }
+            
+            const minsOut = Math.floor(totalSeconds / 60);
+            const secsOut = totalSeconds % 60;
+            writeLog("CONFIG", `Active mode duration modified to ${minsOut}m ${secsOut}s.`);
+            
+            // Sync form fields in setup panel
+            if (timerState.mode === 'focus') {
+              document.getElementById('input-focus-min').value = minsOut;
+              document.getElementById('input-focus-sec').value = secsOut;
+            } else if (timerState.mode === 'shortBreak') {
+              document.getElementById('input-short-min').value = minsOut;
+              document.getElementById('input-short-sec').value = secsOut;
+            } else if (timerState.mode === 'longBreak') {
+              document.getElementById('input-long-min').value = minsOut;
+              document.getElementById('input-long-sec').value = secsOut;
+            }
+
+            updateUI();
+            saveSettingsToStorage();
+          }
+          break;
+
+        case '/volume':
+          const volPercent = parseInt(tokens[1]);
+          if (isNaN(volPercent) || volPercent < 0 || volPercent > 100) {
+            writeLog("SYS", "ERROR: Volume range 0 to 100.");
+          } else {
+            const v = volPercent / 100;
+            document.getElementById('volume-slider').value = v;
+            handleVolumeChange(v);
+            writeLog("CONFIG", `System volume calibrated to ${volPercent}%.`);
+          }
+          break;
+
+        case '/synth':
+          const profile = tokens[1];
+          if (profile === 'arpeggio' || profile === 'sweep' || profile === 'double-beep') {
+            timerState.soundProfile = profile;
+            document.getElementById('select-synth-profile').value = profile;
+            writeLog("CONFIG", `Audio synthesis wave shifted to [${profile.toUpperCase()}].`);
+            saveSettingsToStorage();
+          } else {
+            writeLog("SYS", "ERROR: Presets: arpeggio, sweep, double-beep");
+          }
+          break;
+
+        default:
+          writeLog("SYS", `ERROR: Command unknown: "${cmd}". Write /help for directory instruction.`);
+          break;
+      }
+    }
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      // If user typing in inputs, bypass shortcuts
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') {
+        return;
+      }
+
+      const key = e.code;
+      if (key === 'Space') {
+        e.preventDefault();
+        toggleTimer();
+      } else if (key === 'KeyR') {
+        resetTimer();
+      } else if (key === 'KeyW') {
+        switchMode('focus');
+      } else if (key === 'KeyS') {
+        switchMode('shortBreak');
+      } else if (key === 'KeyL') {
+        switchMode('longBreak');
+      }
+    });
+
+    // Initial setups
+    window.addEventListener('load', () => {
+      // 1. Initialize Lucide Icons
+      lucide.createIcons();
+
+      // 2. Load configurations
+      loadSavedState();
+
+      // 3. Render theme style
+      updateThemeStyles(timerState.mode);
+
+      // 4. Render circles & loops
+      updateUI();
+      updatePipsDisplay();
+
+      // 5. Hide settings panel by default
+      const panel = document.getElementById('setup-panel');
+      panel.style.maxHeight = '0px';
+      panel.style.padding = '0px 1.5rem';
+      panel.style.borderWidth = '0px';
+
+      // 6. Write default terminal logs
+      writeLog("SYS", "Initializing Cyber Pomodoro Clock v1.0.0...");
+      writeLog("SYS", "Frequency Synthesizer ... ONLINE");
+      writeLog("SYS", "Interactive keyboard core loaded: [SPACE] Start, [R] Reset, [W] Focus, [S] Short Break, [L] Long Break");
+      writeLog("SYS", "Terminal prompt compiled. Type <span class='text-white'>/help</span> for instruction directory.");
+    });
+
+    // Form Event Handler
+    document.getElementById('terminal-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('terminal-input');
+      const val = input.value.trim();
+      if (val) {
+        handleTerminalCommand(val);
+        input.value = '';
+      }
+    });
+  </script>
+</body>
+</html>
