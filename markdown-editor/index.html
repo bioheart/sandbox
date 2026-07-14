@@ -676,23 +676,58 @@ console.log(fibonacci(10)); // ผลลัพธ์: 55
 
     // 6. Keyboard tab indentation interceptor
     function setupTabKeySupport() {
+      // Tab key support on the Editor Textarea
       editorTextarea.addEventListener('keydown', (e) => {
         if (e.key === 'Tab') {
           // Block tab behavior focusing away
           e.preventDefault();
           
-          const start = editorTextarea.selectionStart;
-          const end = editorTextarea.selectionEnd;
-          const val = editorTextarea.value;
-          
-          // Insert 4 spaces at current caret position
-          editorTextarea.value = val.substring(0, start) + '    ' + val.substring(end);
-          
-          // Restore cursor index positions
-          editorTextarea.selectionStart = editorTextarea.selectionEnd = start + 4;
+          // Insert 4 spaces at current caret position while preserving undo/redo history (Ctrl+Z)
+          try {
+            if (!document.execCommand('insertText', false, '    ')) {
+              throw new Error('execCommand not supported');
+            }
+          } catch (err) {
+            // Fallback for environment constraints
+            const start = editorTextarea.selectionStart;
+            const end = editorTextarea.selectionEnd;
+            const val = editorTextarea.value;
+            editorTextarea.value = val.substring(0, start) + '    ' + val.substring(end);
+            editorTextarea.selectionStart = editorTextarea.selectionEnd = start + 4;
+          }
           
           // Trigger preview parsing flow
           updatePreview();
+        }
+      });
+
+      // Tab key support on the Live Preview pane (contenteditable)
+      previewContent.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+          // Block tab behavior focusing away
+          e.preventDefault();
+          
+          // Insert 4 spaces inside the contenteditable preview at current caret
+          try {
+            if (!document.execCommand('insertText', false, '    ')) {
+              throw new Error('execCommand not supported');
+            }
+          } catch (err) {
+            // Range API Fallback for contenteditable
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+              const range = selection.getRangeAt(0);
+              const textNode = document.createTextNode('    ');
+              range.insertNode(textNode);
+              range.setStartAfter(textNode);
+              range.setEndAfter(textNode);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+          }
+          
+          // Trigger sync back to markdown editor textarea
+          onPreviewInput();
         }
       });
     }
@@ -754,16 +789,25 @@ console.log(fibonacci(10)); // ผลลัพธ์: 55
           break;
       }
 
-      // Inject syntax
-      editorTextarea.value = originalText.substring(0, start) + insertion + originalText.substring(end);
+      // Focus the textarea and set the selection to make sure execCommand works on correct range
+      editorTextarea.focus();
+      editorTextarea.setSelectionRange(start, end);
+
+      // Inject syntax while preserving undo stack
+      try {
+        if (!document.execCommand('insertText', false, insertion)) {
+          throw new Error('execCommand not supported');
+        }
+      } catch (err) {
+        // Fallback for security/environment constraints
+        editorTextarea.value = originalText.substring(0, start) + insertion + originalText.substring(end);
+      }
       
       // Update preview immediately
       updatePreview();
       
-      // Re-focus text input area
+      // Focus and adjust cursor selection range
       editorTextarea.focus();
-      
-      // Adjust cursor selection range
       if (selection) {
         // Place cursor after selection modified block
         const targetPos = start + insertion.length;
