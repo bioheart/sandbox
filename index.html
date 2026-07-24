@@ -562,17 +562,17 @@
           ${featuredBadge}
           <div>
             <!-- Header Card row -->
-            <div class="flex items-center gap-3 mb-4">
+            <a href="${launchLink}" target="${launchTarget}" class="flex items-center gap-3 mb-4 cursor-pointer">
               <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-gray-900 border border-slate-200 dark:border-gray-800 flex items-center justify-center text-2xl">
                 ${p.icon}
               </div>
               <div>
                 <span class="text-[10px] font-mono tracking-wider text-indigo-600 dark:text-neonCyan uppercase">${p.category}</span>
                 <h3 class="text-base font-bold text-slate-800 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-neonCyan transition-all duration-300 mt-0.5">
-                  <a href="${launchLink}" target="${launchTarget}" class="hover:underline underline-offset-2">${p.title}</a>
+                  ${p.title}
                 </h3>
               </div>
-            </div>
+            </a>
 
             <!-- Description -->
             <p class="text-sm text-slate-600 dark:text-gray-400 mb-6 leading-relaxed">
