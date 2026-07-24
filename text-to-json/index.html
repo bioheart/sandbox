@@ -314,15 +314,22 @@
           </div>
         </div>
 
-        <!-- CODE VIEW -->
+        <!-- CODE VIEW (EDITABLE) -->
         <div id="codeViewContainer" class="flex-1 flex overflow-hidden">
           <!-- Line Numbers -->
           <div id="jsonLineNums" class="w-12 py-3 px-2 bg-slate-50 dark:bg-slate-950/80 border-r border-slate-200 dark:border-slate-900 flex flex-col font-mono text-xs text-slate-400 dark:text-slate-600 select-none overflow-hidden text-right leading-6 shrink-0">
             1
           </div>
 
-          <!-- Highlighted JSON Code Display -->
-          <pre id="jsonOutput" class="flex-1 py-3 px-4 font-mono text-sm leading-6 overflow-y-auto overflow-x-auto text-slate-800 dark:text-slate-200 selection:bg-purple-500/30"></pre>
+          <!-- Synchronized Overlay Editor -->
+          <div class="flex-1 relative overflow-hidden group">
+            <!-- Highlighted Background Layer -->
+            <pre id="jsonOutput" class="absolute inset-0 py-3 px-4 font-mono text-sm leading-6 overflow-y-auto overflow-x-auto text-slate-800 dark:text-slate-200 selection:bg-purple-500/30 whitespace-pre-wrap break-words pointer-events-none"></pre>
+
+            <!-- Foreground Editable Textarea -->
+            <textarea id="jsonEditor" spellcheck="false" placeholder="JSON Editor (แก้ไขตรงนี้ได้เลย)..." 
+              class="absolute inset-0 w-full h-full py-3 px-4 bg-transparent text-slate-800 dark:text-slate-200 font-mono text-sm leading-6 resize-none focus:outline-none placeholder-slate-400 dark:placeholder-slate-600 overflow-y-auto whitespace-pre-wrap break-words caret-indigo-600 dark:caret-neonCyan"></textarea>
+          </div>
         </div>
 
         <!-- TREE VIEW (Collapsible) -->

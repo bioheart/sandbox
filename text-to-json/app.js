@@ -11,6 +11,7 @@ const PRESETS = {
 // DOM ELEMENTS
 const textInput = document.getElementById('textInput');
 const jsonOutput = document.getElementById('jsonOutput');
+const jsonEditor = document.getElementById('jsonEditor');
 const inputTextLineNums = document.getElementById('inputTextLineNums');
 const jsonLineNums = document.getElementById('jsonLineNums');
 const modeSelect = document.getElementById('modeSelect');
@@ -83,9 +84,18 @@ textInput.addEventListener('scroll', () => {
   inputTextLineNums.scrollTop = textInput.scrollTop;
 });
 
-jsonOutput.addEventListener('scroll', () => {
-  jsonLineNums.scrollTop = jsonOutput.scrollTop;
-});
+// JSON EDITOR OVERLAY EVENT LISTENERS
+if (jsonEditor) {
+  jsonEditor.addEventListener('scroll', () => {
+    jsonOutput.scrollTop = jsonEditor.scrollTop;
+    jsonOutput.scrollLeft = jsonEditor.scrollLeft;
+    jsonLineNums.scrollTop = jsonEditor.scrollTop;
+  });
+
+  jsonEditor.addEventListener('input', () => {
+    handleJSONEditorInput();
+  });
+}
 
 modeSelect.addEventListener('change', () => convertTextToJSON());
 autoTypeCast.addEventListener('change', () => convertTextToJSON());
@@ -120,9 +130,9 @@ minifyBtn.addEventListener('click', () => {
 });
 
 copyBtn.addEventListener('click', () => {
-  const textToCopy = isMinified ? JSON.stringify(currentParsedData) : JSON.stringify(currentParsedData, null, 2);
-  if (!textToCopy) return;
-  navigator.clipboard.writeText(textToCopy).then(() => {
+  const rawText = jsonEditor ? jsonEditor.value : JSON.stringify(currentParsedData, null, 2);
+  if (!rawText) return;
+  navigator.clipboard.writeText(rawText).then(() => {
     showToast('Copied JSON to clipboard!', 'success');
   }).catch(() => {
     showToast('Failed to copy', 'error');
@@ -130,11 +140,12 @@ copyBtn.addEventListener('click', () => {
 });
 
 downloadBtn.addEventListener('click', () => {
-  if (!currentParsedData && currentParsedData !== 0 && currentParsedData !== false) {
+  const rawText = jsonEditor ? jsonEditor.value : JSON.stringify(currentParsedData, null, 2);
+  if (!rawText.trim()) {
     showToast('Nothing to download', 'error');
     return;
   }
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentParsedData, null, 2));
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(rawText);
   const downloadAnchor = document.createElement('a');
   downloadAnchor.setAttribute("href", dataStr);
   downloadAnchor.setAttribute("download", `data_${Date.now()}.json`);
@@ -146,14 +157,17 @@ downloadBtn.addEventListener('click', () => {
 
 clearBtn.addEventListener('click', () => {
   textInput.value = '';
+  if (jsonEditor) jsonEditor.value = '';
+  jsonOutput.innerHTML = '';
   updateInputStatsAndLines();
   convertTextToJSON();
   showToast('Cleared input text', 'info');
 });
 
 swapBtn.addEventListener('click', () => {
-  if (currentParsedData !== null) {
-    textInput.value = JSON.stringify(currentParsedData, null, 2);
+  const jsonText = jsonEditor ? jsonEditor.value : JSON.stringify(currentParsedData, null, 2);
+  if (jsonText.trim()) {
+    textInput.value = jsonText;
     updateInputStatsAndLines();
     convertTextToJSON();
     showToast('Swapped JSON into Text Input', 'info');
@@ -191,7 +205,7 @@ treeViewBtn.addEventListener('click', () => {
   renderTreeView();
 });
 
-// CORE TEXT TO JSON CONVERSION ENGINE
+// CORE TEXT TO JSON CONVERSION ENGINE (LEFT -> RIGHT)
 function convertTextToJSON() {
   const startTime = performance.now();
   const rawText = textInput.value;
@@ -233,6 +247,52 @@ function convertTextToJSON() {
     updateStatus(false, 'Parse Error');
     currentParsedData = { error: err.message || 'Parse Error', raw_text: rawText };
     renderJSONOutput();
+  }
+
+  const duration = (performance.now() - startTime).toFixed(1);
+  setConvertTime(duration);
+}
+
+// HANDLE DIRECT EDITING IN RIGHT PANE (RIGHT -> PARSER)
+function handleJSONEditorInput() {
+  const startTime = performance.now();
+  const rawJSON = jsonEditor.value;
+
+  // Sync Scroll Positions
+  jsonOutput.scrollTop = jsonEditor.scrollTop;
+  jsonOutput.scrollLeft = jsonEditor.scrollLeft;
+  jsonLineNums.scrollTop = jsonEditor.scrollTop;
+
+  // Update Stats & Line Numbers
+  const lines = rawJSON.split('\n');
+  updateJSONLineNums(lines.length);
+  updateOutputByteStats(new Blob([rawJSON]).size);
+
+  if (!rawJSON.trim()) {
+    jsonOutput.innerHTML = '';
+    currentParsedData = {};
+    updateStatus(true, 'Empty JSON');
+    hideError();
+    setConvertTime(0);
+    return;
+  }
+
+  // Live Syntax Highlight Layer
+  jsonOutput.innerHTML = syntaxHighlightJSON(rawJSON);
+
+  // Validate JSON
+  try {
+    const parsed = JSON.parse(rawJSON);
+    currentParsedData = parsed;
+    updateStatus(true, 'Valid JSON');
+    hideError();
+
+    if (activeView === 'tree') {
+      renderTreeView();
+    }
+  } catch (err) {
+    updateStatus(false, 'Parse Error');
+    showError(err.message || 'Invalid JSON syntax');
   }
 
   const duration = (performance.now() - startTime).toFixed(1);
@@ -388,12 +448,18 @@ function autoCastValue(val) {
 function renderJSONOutput() {
   if (currentParsedData === null) {
     jsonOutput.innerHTML = '';
+    if (jsonEditor && document.activeElement !== jsonEditor) jsonEditor.value = '';
     updateJSONLineNums(1);
     updateOutputByteStats(0);
     return;
   }
 
   const jsonStr = isMinified ? JSON.stringify(currentParsedData) : JSON.stringify(currentParsedData, null, 2);
+  
+  if (jsonEditor && document.activeElement !== jsonEditor) {
+    jsonEditor.value = jsonStr;
+  }
+  
   updateOutputByteStats(new Blob([jsonStr]).size);
 
   // Syntax highlight
