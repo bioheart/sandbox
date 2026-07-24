@@ -46,17 +46,28 @@ const editModeLabel = document.getElementById('editModeLabel');
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 const themeSunIcon = document.getElementById('themeSunIcon');
 const themeMoonIcon = document.getElementById('themeMoonIcon');
+const resetModeBtn = document.getElementById('resetModeBtn');
+const addTabBtn = document.getElementById('addTabBtn');
 
 let currentParsedData = null;
 let isMinified = false;
 let activeView = 'code'; // 'code' or 'tree'
 let isEditMode = false;  // Right pane edit mode toggle
 
+// TABS STATE & MANAGEMENT SYSTEM
+let tabs = [
+  { id: 'tab-1', title: 'Doc 1 (Key-Value)', mode: 'auto', text: PRESETS.keyvalue },
+  { id: 'tab-2', title: 'Doc 2 (CSV Table)', mode: 'auto', text: PRESETS.csv },
+  { id: 'tab-3', title: 'Doc 3 (Raw JSON)', mode: 'json', text: PRESETS.json }
+];
+let activeTabId = 'tab-1';
+
 // INITIALIZATION
 window.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
   updateThemeIcons();
-  textInput.value = PRESETS.keyvalue;
+  loadTabsFromStorage();
+  renderTabs();
   updateInputStatsAndLines();
   convertTextToJSON();
 });
@@ -78,6 +89,191 @@ function updateThemeIcons() {
     themeSunIcon.classList.add('hidden');
     themeMoonIcon.classList.remove('hidden');
   }
+}
+
+// MULTI-TAB CONTROLLER FUNCTIONS
+function renderTabs() {
+  const tabList = document.getElementById('tabList');
+  if (!tabList) return;
+
+  tabList.innerHTML = '';
+
+  tabs.forEach((tab) => {
+    const isActive = tab.id === activeTabId;
+    const tabEl = document.createElement('div');
+
+    tabEl.className = `group flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-t-lg border border-b-0 cursor-pointer transition-all ${
+      isActive
+        ? 'bg-white dark:bg-slate-950 text-indigo-600 dark:text-neonCyan border-slate-300 dark:border-slate-800 font-bold shadow-sm -mb-[1px]'
+        : 'bg-slate-200/60 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-slate-200 dark:hover:bg-slate-850'
+    }`;
+
+    // Document Icon
+    const icon = document.createElement('i');
+    icon.setAttribute('data-lucide', 'file-text');
+    icon.className = 'w-3.5 h-3.5 shrink-0 opacity-80';
+
+    // Title Span (double click to rename)
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'tab-title truncate max-w-[120px] select-none';
+    titleSpan.textContent = tab.title;
+    titleSpan.title = 'Double-click to rename tab';
+
+    titleSpan.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const newTitle = prompt('Rename document tab:', tab.title);
+      if (newTitle && newTitle.trim()) {
+        tab.title = newTitle.trim();
+        renderTabs();
+        saveTabsToStorage();
+      }
+    });
+
+    tabEl.appendChild(icon);
+    tabEl.appendChild(titleSpan);
+
+    // Close button (only if > 1 tabs)
+    if (tabs.length > 1) {
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'opacity-50 group-hover:opacity-100 hover:text-rose-500 transition p-0.5 rounded ml-1';
+      closeBtn.innerHTML = `<i data-lucide="x" class="w-3 h-3"></i>`;
+      closeBtn.title = 'Close document tab';
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeTab(tab.id);
+      });
+      tabEl.appendChild(closeBtn);
+    }
+
+    // Switch tab on click
+    tabEl.addEventListener('click', () => {
+      if (activeTabId !== tab.id) {
+        switchTab(tab.id);
+      }
+    });
+
+    tabList.appendChild(tabEl);
+  });
+
+  lucide.createIcons();
+}
+
+function switchTab(targetId) {
+  // Save current active tab state
+  const currentTab = tabs.find(t => t.id === activeTabId);
+  if (currentTab) {
+    currentTab.text = textInput.value;
+    currentTab.mode = modeSelect.value;
+  }
+
+  // Activate target tab
+  activeTabId = targetId;
+  const targetTab = tabs.find(t => t.id === activeTabId);
+  if (!targetTab) return;
+
+  textInput.value = targetTab.text !== undefined ? targetTab.text : '';
+  modeSelect.value = targetTab.mode || 'auto';
+
+  if (isEditMode) {
+    isEditMode = false;
+    updateEditModeUI();
+  }
+
+  renderTabs();
+  updateInputStatsAndLines();
+  convertTextToJSON();
+  saveTabsToStorage();
+  showToast(`Switched to "${targetTab.title}"`, 'info');
+}
+
+function createNewTab() {
+  // Save current active tab state
+  const currentTab = tabs.find(t => t.id === activeTabId);
+  if (currentTab) {
+    currentTab.text = textInput.value;
+    currentTab.mode = modeSelect.value;
+  }
+
+  const newId = `tab-${Date.now()}`;
+  const tabNumber = tabs.length + 1;
+  const newTab = {
+    id: newId,
+    title: `Doc ${tabNumber}`,
+    mode: 'auto',
+    text: ''
+  };
+
+  tabs.push(newTab);
+  activeTabId = newId;
+
+  textInput.value = '';
+  modeSelect.value = 'auto';
+
+  if (isEditMode) {
+    isEditMode = false;
+    updateEditModeUI();
+  }
+
+  renderTabs();
+  updateInputStatsAndLines();
+  convertTextToJSON();
+  saveTabsToStorage();
+  textInput.focus();
+  showToast(`Created new tab "Doc ${tabNumber}"`, 'success');
+}
+
+function closeTab(tabId) {
+  if (tabs.length <= 1) return;
+
+  const idx = tabs.findIndex(t => t.id === tabId);
+  if (idx === -1) return;
+
+  const closingTitle = tabs[idx].title;
+  tabs.splice(idx, 1);
+
+  if (activeTabId === tabId) {
+    const nextTab = tabs[Math.max(0, idx - 1)];
+    activeTabId = nextTab.id;
+    textInput.value = nextTab.text !== undefined ? nextTab.text : '';
+    modeSelect.value = nextTab.mode || 'auto';
+  }
+
+  renderTabs();
+  updateInputStatsAndLines();
+  convertTextToJSON();
+  saveTabsToStorage();
+  showToast(`Closed "${closingTitle}"`, 'info');
+}
+
+function saveTabsToStorage() {
+  const currentTab = tabs.find(t => t.id === activeTabId);
+  if (currentTab) {
+    currentTab.text = textInput.value;
+    currentTab.mode = modeSelect.value;
+  }
+  localStorage.setItem('textToJson_tabs', JSON.stringify({ tabs, activeTabId }));
+}
+
+function loadTabsFromStorage() {
+  try {
+    const stored = localStorage.getItem('textToJson_tabs');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed.tabs) && parsed.tabs.length > 0) {
+        tabs = parsed.tabs;
+        activeTabId = parsed.activeTabId && tabs.some(t => t.id === parsed.activeTabId) ? parsed.activeTabId : tabs[0].id;
+        const activeTab = tabs.find(t => t.id === activeTabId);
+        if (activeTab) {
+          textInput.value = activeTab.text !== undefined ? activeTab.text : PRESETS.keyvalue;
+          modeSelect.value = activeTab.mode || 'auto';
+        }
+      }
+    }
+  } catch (e) {}
+}
+
+if (addTabBtn) {
+  addTabBtn.addEventListener('click', createNewTab);
 }
 
 // EDIT MODE TOGGLE
@@ -115,7 +311,12 @@ textInput.addEventListener('focus', () => {
 
 textInput.addEventListener('input', () => {
   updateInputStatsAndLines();
+  const currentTab = tabs.find(t => t.id === activeTabId);
+  if (currentTab) {
+    currentTab.text = textInput.value;
+  }
   convertTextToJSON();
+  saveTabsToStorage();
 });
 
 textInput.addEventListener('scroll', () => {
@@ -143,6 +344,7 @@ if (jsonEditor) {
       updateEditModeUI();
     }
     handleJSONEditorInput();
+    saveTabsToStorage();
   });
 }
 
@@ -156,18 +358,28 @@ if (jsonEditorWrapper) {
 }
 
 modeSelect.addEventListener('change', () => {
+  const currentTab = tabs.find(t => t.id === activeTabId);
+  if (currentTab) {
+    currentTab.mode = modeSelect.value;
+  }
+
   if (isEditMode && currentParsedData !== null) {
     syncRightToLeft(currentParsedData, modeSelect.value);
   } else {
     convertTextToJSON();
   }
+  saveTabsToStorage();
 });
 
-const resetModeBtn = document.getElementById('resetModeBtn');
 if (resetModeBtn) {
   resetModeBtn.addEventListener('click', () => {
     modeSelect.value = 'auto';
+    const currentTab = tabs.find(t => t.id === activeTabId);
+    if (currentTab) {
+      currentTab.mode = 'auto';
+    }
     convertTextToJSON();
+    saveTabsToStorage();
     showToast('Reset mode to Auto Smart Detect', 'info');
   });
 }
@@ -193,6 +405,7 @@ presetSelect.addEventListener('change', (e) => {
 
     updateInputStatsAndLines();
     convertTextToJSON();
+    saveTabsToStorage();
     showToast(`Loaded ${e.target.options[e.target.selectedIndex].text}`, 'info');
   }
 });
@@ -242,6 +455,7 @@ clearBtn.addEventListener('click', () => {
   if (detectedFormatBadge) detectedFormatBadge.classList.add('hidden');
   updateInputStatsAndLines();
   convertTextToJSON();
+  saveTabsToStorage();
   showToast('Cleared input text', 'info');
 });
 
@@ -255,6 +469,7 @@ swapBtn.addEventListener('click', () => {
     }
     updateInputStatsAndLines();
     convertTextToJSON();
+    saveTabsToStorage();
     showToast('Swapped JSON into Text Input', 'info');
   }
 });
@@ -266,6 +481,7 @@ pasteTextBtn.addEventListener('click', async () => {
       textInput.value = text;
       updateInputStatsAndLines();
       convertTextToJSON();
+      saveTabsToStorage();
       showToast('Pasted from clipboard', 'success');
     }
   } catch (err) {
@@ -820,6 +1036,7 @@ function buildTreeNode(key, value, isLast = true, path = []) {
 
       // Reverse Sync back to Left Pane Text
       syncRightToLeft(currentParsedData, modeSelect.value);
+      saveTabsToStorage();
     };
 
     valSpan.addEventListener('blur', saveTreeValueEdit);

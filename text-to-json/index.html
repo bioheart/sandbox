@@ -123,6 +123,13 @@
     .animate-toast {
       animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
   </style>
 </head>
 
@@ -132,8 +139,11 @@
   <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20 transition-colors duration-300">
     
     <!-- App Branding -->
-    <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 via-indigo-500 to-purple-600 p-0.5 shadow-lg shadow-cyan-500/20">
+    <div class="flex items-center gap-2.5">
+      <a href="../index.html" title="Back to Sandbox Home" class="p-2 text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 rounded-xl transition active:scale-95 flex items-center justify-center shrink-0">
+        <i data-lucide="home" class="w-4 h-4"></i>
+      </a>
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 via-indigo-500 to-purple-600 p-0.5 shadow-lg shadow-cyan-500/20 shrink-0">
         <div class="w-full h-full bg-white dark:bg-slate-950 rounded-[10px] flex items-center justify-center">
           <i data-lucide="file-json" class="w-5 h-5 text-indigo-600 dark:text-neonCyan"></i>
         </div>
@@ -227,6 +237,20 @@
       </button>
     </div>
   </header>
+
+  <!-- MULTI-DOCUMENT TAB BAR STRIP -->
+  <div class="bg-slate-100 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800/80 px-3 pt-1 pb-0 flex items-center justify-between gap-2 shrink-0 select-none z-10 overflow-hidden">
+    <!-- Dynamic Tab List -->
+    <div id="tabList" class="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+      <!-- Tabs rendered dynamically -->
+    </div>
+
+    <!-- New Tab Button -->
+    <button id="addTabBtn" title="Create New JSON Document Tab" class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:text-neonCyan bg-white dark:bg-slate-950 hover:bg-indigo-50 dark:hover:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-t-lg transition active:scale-95 shrink-0 -mb-[1px] border-b-transparent shadow-sm">
+      <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+      <span>New Document</span>
+    </button>
+  </div>
 
   <!-- MAIN SPLIT WORKSPACE -->
   <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
