@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="th" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agent Global Rules Vault | Rules Repository</title>
+  <meta name="description" content="Centralized repository for AI Agent Global Rules including Gemini (AGENTS.md), ChatGPT Custom Instructions, and Claude prompts.">
+
+  <!-- Google Fonts & Tailwind CSS CDN -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons & Marked.js & GitHub Markdown CSS CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            neonCyan: '#00f2fe',
+            neonPurple: '#9d4edd',
+            neonPink: '#f43f5e',
+            slate850: '#0f172a',
+            slate950: '#090d16',
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['Fira Code', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 4px; }
+    .dark ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.5); }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
+
+    /* Markdown Styling */
+    .prose-custom h1 { @apply text-2xl font-extrabold text-slate-900 dark:text-white mb-4 pb-2 border-b border-slate-200 dark:border-slate-800; }
+    .prose-custom h2 { @apply text-lg font-bold text-indigo-600 dark:text-neonCyan mt-6 mb-3 flex items-center gap-2; }
+    .prose-custom p { @apply text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-3; }
+    .prose-custom ul { @apply list-disc list-inside text-sm text-slate-600 dark:text-slate-300 space-y-1 mb-4 pl-2; }
+    .prose-custom ol { @apply list-decimal list-inside text-sm text-slate-600 dark:text-slate-300 space-y-1 mb-4 pl-2; }
+    .prose-custom li { @apply leading-relaxed; }
+    .prose-custom code { @apply bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-pink-400 font-mono text-xs px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700/60; }
+    .prose-custom pre { @apply bg-slate-900 text-slate-200 p-4 rounded-xl font-mono text-xs overflow-x-auto my-3 border border-slate-800; }
+    .prose-custom strong { @apply text-slate-900 dark:text-white font-semibold; }
+    .prose-custom blockquote { @apply border-l-4 border-indigo-500 pl-4 py-1 italic text-slate-500 dark:text-slate-400 bg-indigo-50/50 dark:bg-indigo-950/20 my-3 rounded-r-lg; }
+
+    /* Toast Animation */
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(16px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .animate-toast { animation: toastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  </style>
+
+  <script>
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate950 text-slate-800 dark:text-slate-200 font-sans min-h-screen flex flex-col transition-colors duration-300">
+
+  <!-- HEADER NAVIGATION -->
+  <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20 sticky top-0">
+    
+    <!-- Branding & Home Link -->
+    <div class="flex items-center gap-3">
+      <a href="../index.html" title="Back to Sandbox Home" class="p-2 text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 rounded-xl transition active:scale-95 flex items-center justify-center shrink-0">
+        <i data-lucide="home" class="w-4 h-4"></i>
+      </a>
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-0.5 shadow-lg shadow-indigo-500/20 shrink-0 flex items-center justify-center">
+        <div class="w-full h-full bg-white dark:bg-slate-950 rounded-[10px] flex items-center justify-center">
+          <i data-lucide="shield-check" class="w-5 h-5 text-indigo-600 dark:text-neonCyan"></i>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-base tracking-tight text-slate-900 dark:text-white">AI Agent <span class="text-indigo-600 dark:text-neonCyan">Rules Vault</span></h1>
+          <span class="px-2 py-0.5 text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-neonCyan border border-indigo-300 dark:border-indigo-500/30 rounded-full">v1.0</span>
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Global Rules & Custom Instructions for Gemini, ChatGPT & Claude</p>
+      </div>
+    </div>
+
+    <!-- Search & Controls -->
+    <div class="flex items-center gap-2.5 flex-wrap">
+      <!-- Search Input -->
+      <div class="relative flex items-center">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none"></i>
+        <input type="text" id="searchInput" placeholder="Search rules..." class="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-medium pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700/80 focus:outline-none focus:border-indigo-500 dark:focus:border-neonCyan transition w-44 sm:w-60">
+      </div>
+
+      <!-- Save Rules -->
+      <button id="saveRulesBtn" title="Save current rules (Persists in local storage)" class="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl shadow-md transition active:scale-95 flex items-center gap-1.5">
+        <i data-lucide="save" class="w-3.5 h-3.5"></i>
+        <span>Save</span>
+      </button>
+
+      <!-- Set as Default -->
+      <button id="saveDefaultBtn" title="Set current rules as default baseline for Reset" class="px-2.5 py-1.5 text-xs font-semibold text-indigo-700 dark:text-neonCyan bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/80 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 rounded-xl shadow-sm transition active:scale-95 flex items-center gap-1.5">
+        <i data-lucide="bookmark" class="w-3.5 h-3.5"></i>
+        <span>Set Default</span>
+      </button>
+
+      <!-- Copy Active Rules -->
+      <button id="copyRulesBtn" title="Copy active markdown rules to clipboard" class="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-xl shadow-md transition active:scale-95 flex items-center gap-1.5">
+        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+        <span>Copy</span>
+      </button>
+
+      <!-- Download Markdown -->
+      <button id="downloadRulesBtn" title="Download markdown file" class="px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 rounded-xl transition active:scale-95 flex items-center gap-1.5">
+        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+        <span>Export .md</span>
+      </button>
+
+      <!-- Export Full JSON Store -->
+      <button id="exportJsonBtn" title="Export entire rules database as rules-store.json for repository commit" class="px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 rounded-xl transition active:scale-95 flex items-center gap-1.5">
+        <i data-lucide="file-json" class="w-3.5 h-3.5 text-amber-500"></i>
+        <span>JSON Store</span>
+      </button>
+
+      <!-- Reset Defaults -->
+      <button id="resetRulesBtn" title="Reset current rules to default" class="px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 rounded-xl transition active:scale-95 flex items-center gap-1">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+        <span>Reset</span>
+      </button>
+
+      <!-- Auth Lock / Admin Status -->
+      <button id="authLockBtn" title="Toggle Admin Auth Lock" class="px-3 py-1.5 text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 hover:bg-amber-200 dark:hover:bg-amber-900 border border-amber-300 dark:border-amber-700/60 rounded-xl transition active:scale-95 flex items-center gap-1.5 shadow-sm">
+        <i data-lucide="lock" id="authLockIcon" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"></i>
+        <span id="authStatusText">View Only</span>
+      </button>
+
+      <!-- Theme Toggle -->
+      <button id="themeToggleBtn" title="Toggle Light/Dark Theme" class="p-2 text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/80 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 rounded-xl transition active:scale-95">
+        <i data-lucide="sun" id="themeSunIcon" class="w-4 h-4 hidden dark:inline-block text-amber-400"></i>
+        <i data-lucide="moon" id="themeMoonIcon" class="w-4 h-4 inline-block dark:hidden text-slate-600"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <div class="flex-1 flex flex-col md:flex-row overflow-hidden max-w-[1600px] w-full mx-auto p-4 gap-4">
+
+    <!-- SIDEBAR AGENT SELECTION -->
+    <aside class="w-full md:w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 flex flex-col shrink-0 gap-2 shadow-sm">
+      <div class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-1">AI Agent Platforms</div>
+
+      <!-- Gemini / Antigravity Tab -->
+      <button id="tabGemini" class="flex items-center gap-3 p-3 rounded-xl text-left transition font-semibold text-xs border bg-indigo-50 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800/80 text-indigo-700 dark:text-neonCyan shadow-sm">
+        <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+          <i data-lucide="bot" class="w-4 h-4 text-indigo-600 dark:text-neonCyan"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-slate-900 dark:text-white">Gemini Agent</div>
+          <div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">AGENTS.md Global Rules</div>
+        </div>
+      </button>
+
+      <!-- ChatGPT Tab -->
+      <button id="tabChatGPT" class="flex items-center gap-3 p-3 rounded-xl text-left transition font-semibold text-xs border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400">
+        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+          <i data-lucide="message-square" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-slate-900 dark:text-white">ChatGPT</div>
+          <div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">Custom Instructions</div>
+        </div>
+      </button>
+
+      <!-- Claude Tab -->
+      <button id="tabClaude" class="flex items-center gap-3 p-3 rounded-xl text-left transition font-semibold text-xs border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400">
+        <div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+          <i data-lucide="sparkles" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-slate-900 dark:text-white">Claude AI</div>
+          <div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">System Prompt Guidelines</div>
+        </div>
+      </button>
+
+      <hr class="border-slate-200 dark:border-slate-800 my-1">
+
+      <!-- Quick Rule Tags Filter -->
+      <div class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-1 mt-1">Rule Categories</div>
+      <div class="flex flex-wrap gap-1.5 px-1" id="categoryTagsContainer">
+        <!-- Injected via JS -->
+      </div>
+    </aside>
+
+    <!-- CONTENT DISPLAY AREA -->
+    <main class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col overflow-hidden shadow-sm">
+      
+      <!-- Content View Mode & Sub-Tab Toolbar -->
+      <div class="bg-slate-100/80 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0 select-none">
+        
+        <!-- Document Title & Sub-Tabs (Global Rules vs Personalization) -->
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="flex items-center gap-2">
+            <i data-lucide="file-text" class="w-4 h-4 text-indigo-600 dark:text-neonCyan"></i>
+            <span id="activeDocumentTitle" class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Gemini Agent</span>
+          </div>
+
+          <!-- Sub-Tabs: Global Rules vs Personalization -->
+          <div class="flex bg-white dark:bg-slate-900 p-0.5 rounded-xl border border-slate-200 dark:border-slate-800">
+            <button id="subtabRulesBtn" class="px-3 py-1 text-xs font-bold rounded-lg text-indigo-600 dark:text-neonCyan bg-slate-100 dark:bg-slate-800 shadow-sm transition flex items-center gap-1.5">
+              <i data-lucide="scroll-text" class="w-3.5 h-3.5"></i>
+              <span>Global Rules</span>
+            </button>
+            <button id="subtabPersonalizeBtn" class="px-3 py-1 text-xs font-bold rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition flex items-center gap-1.5">
+              <i data-lucide="user-cog" class="w-3.5 h-3.5"></i>
+              <span>Personalization</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- View Mode Switcher -->
+        <div class="flex bg-white dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
+          <button id="viewRenderedBtn" class="px-2.5 py-1 text-xs font-semibold rounded-md text-indigo-600 dark:text-neonCyan bg-slate-100 dark:bg-slate-800 shadow-sm transition flex items-center gap-1">
+            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+            <span>Preview</span>
+          </button>
+          <button id="viewRawBtn" class="px-2.5 py-1 text-xs font-semibold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition flex items-center gap-1">
+            <i data-lucide="code-2" class="w-3.5 h-3.5"></i>
+            <span>Raw Editor</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Rendered Markdown Container (GitHub GFM Preview Theme) -->
+      <div id="renderedContainer" class="flex-1 p-6 overflow-y-auto markdown-body bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+        <!-- Rendered markdown html injected here -->
+      </div>
+
+      <!-- Raw Markdown Textarea -->
+      <div id="rawContainer" class="flex-1 p-4 hidden flex-col">
+        <textarea id="rawTextarea" class="w-full h-full p-4 bg-slate-950 text-slate-200 font-mono text-xs rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed" spellcheck="false"></textarea>
+      </div>
+
+      <!-- Bottom File System Sync / Info Bar -->
+      <div id="filePathInfoBar" class="bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 px-4 py-2 text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2 overflow-hidden">
+          <i data-lucide="info" class="w-3.5 h-3.5 text-indigo-500 shrink-0"></i>
+          <span class="truncate" id="storagePathText">Storage Location: Browser LocalStorage • Target File: /Users/bioheart/.gemini/config/AGENTS.md</span>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-semibold text-[10px] shrink-0">PERSISTED</span>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- AUTH MODAL OVERLAY -->
+  <div id="authModal" class="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl mx-4">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-0.5 shadow-lg">
+          <div class="w-full h-full bg-white dark:bg-slate-950 rounded-[10px] flex items-center justify-center">
+            <i data-lucide="shield-check" class="w-5 h-5 text-indigo-600 dark:text-neonCyan"></i>
+          </div>
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">Admin Authentication</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Enter passcode to unlock editing</p>
+        </div>
+      </div>
+
+      <div class="relative mb-4">
+        <i data-lucide="key-round" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+        <input type="password" id="authPasswordInput" placeholder="Enter passcode..." autocomplete="off"
+          class="w-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm font-mono pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700/80 focus:outline-none focus:border-indigo-500 dark:focus:border-neonCyan transition">
+      </div>
+      <p id="authError" class="text-xs text-rose-500 dark:text-rose-400 mb-3 hidden">Incorrect passcode. Please try again.</p>
+
+      <div class="flex gap-2">
+        <button id="authSubmitBtn" class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-xl shadow-md transition active:scale-95 flex items-center justify-center gap-2">
+          <i data-lucide="unlock" class="w-4 h-4"></i>
+          <span>Unlock</span>
+        </button>
+        <button id="authCancelBtn" class="px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 rounded-xl transition active:scale-95">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
