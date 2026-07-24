@@ -5,7 +5,7 @@ const PRESETS = {
   lines: `Apple iPhone 15 Pro\nSamsung Galaxy S24 Ultra\nGoogle Pixel 8 Pro\nMacBook Pro M3\niPad Air 5`,
   stringified: `{\\"event\\": \\"user_signup\\", \\"user_id\\": 98412, \\"metadata\\": {\\"source\\": \\"facebook_ads\\", \\"campaign\\": \\"summer_sale\\"}, \\"timestamp\\": 1721838000}`,
   log: `[INFO] 2026-07-24 16:20:00 - User user_88 logged in from IP 192.168.1.50 status=success duration=12ms`,
-  json: `{\n  "status": "success",\n  "code": 200,\n  "data": {\n    "user": {\n      "id": 42,\n      "username": "bioheart",\n      "roles": ["admin", "developer"]\n    },\n    "active_session": true\n  }\n}`
+  json: `{\n  "name": "Somchai Jaidee",\n  "age": 29,\n  "is_developer": true,\n  "skills": [\n    "JavaScript",\n    "Python",\n    "HTML"\n  ],\n  "city": "Bangkok",\n  "salary": 45000,\n  "project_completed": null\n}`
 };
 
 // DOM ELEMENTS
@@ -22,6 +22,7 @@ const statusBadgeText = document.getElementById('statusBadgeText');
 const errorAlert = document.getElementById('errorAlert');
 const errorMessage = document.getElementById('errorMessage');
 const textCharStats = document.getElementById('textCharStats');
+const detectedFormatBadge = document.getElementById('detectedFormatBadge');
 const jsonStats = document.getElementById('jsonStats');
 const convertTime = document.getElementById('convertTime');
 const prettifyBtn = document.getElementById('prettifyBtn');
@@ -162,6 +163,15 @@ modeSelect.addEventListener('change', () => {
   }
 });
 
+const resetModeBtn = document.getElementById('resetModeBtn');
+if (resetModeBtn) {
+  resetModeBtn.addEventListener('click', () => {
+    modeSelect.value = 'auto';
+    convertTextToJSON();
+    showToast('Reset mode to Auto Smart Detect', 'info');
+  });
+}
+
 autoTypeCast.addEventListener('change', () => convertTextToJSON());
 skipEmpty.addEventListener('change', () => convertTextToJSON());
 
@@ -173,6 +183,7 @@ presetSelect.addEventListener('change', (e) => {
     else if (selected === 'lines') modeSelect.value = 'lines';
     else if (selected === 'stringified') modeSelect.value = 'auto';
     else if (selected === 'keyvalue') modeSelect.value = 'kv';
+    else if (selected === 'json') modeSelect.value = 'json';
     else modeSelect.value = 'auto';
 
     if (isEditMode) {
@@ -228,6 +239,7 @@ clearBtn.addEventListener('click', () => {
   textInput.value = '';
   if (jsonEditor) jsonEditor.value = '';
   jsonOutput.innerHTML = '';
+  if (detectedFormatBadge) detectedFormatBadge.classList.add('hidden');
   updateInputStatsAndLines();
   convertTextToJSON();
   showToast('Cleared input text', 'info');
@@ -293,31 +305,48 @@ function convertTextToJSON() {
     currentParsedData = {};
     renderJSONOutput();
     updateStatus(true, 'Empty Input');
+    if (detectedFormatBadge) detectedFormatBadge.classList.add('hidden');
     setConvertTime(0);
     return;
   }
 
   try {
     let result = null;
+    let detectedName = '';
 
     if (mode === 'auto') {
-      result = autoDetectConvert(rawText, shouldCast, shouldSkipEmpty);
+      const detectRes = autoDetectConvert(rawText, shouldCast, shouldSkipEmpty);
+      result = detectRes.data;
+      detectedName = detectRes.detectedType;
+    } else if (mode === 'json') {
+      result = parseLooseJSON(rawText);
+      detectedName = 'Raw JSON';
     } else if (mode === 'kv') {
       result = parseKeyValueText(rawText, shouldCast, shouldSkipEmpty);
+      detectedName = 'Key-Value';
     } else if (mode === 'lines') {
       result = parseLineArray(rawText, shouldCast, shouldSkipEmpty);
+      detectedName = 'Line Array';
     } else if (mode === 'csv') {
       result = parseCSVText(rawText, shouldCast);
+      detectedName = 'CSV Table';
     } else if (mode === 'escape') {
       result = rawText; // Will be JSON stringified
+      detectedName = 'String Escape';
+    }
+
+    if (detectedFormatBadge) {
+      detectedFormatBadge.textContent = mode === 'auto' ? `Auto: ${detectedName}` : `Mode: ${detectedName}`;
+      detectedFormatBadge.classList.remove('hidden');
     }
 
     currentParsedData = result;
-    updateStatus(true, 'Valid JSON');
+    updateStatus(true, `Valid JSON (${detectedName})`);
     renderJSONOutput();
   } catch (err) {
     showError(err.message || 'Failed to parse text into JSON');
     updateStatus(false, 'Parse Error');
+    if (detectedFormatBadge) detectedFormatBadge.classList.add('hidden');
     currentParsedData = { error: err.message || 'Parse Error', raw_text: rawText };
     renderJSONOutput();
   }
@@ -357,7 +386,7 @@ function handleJSONEditorInput() {
 
   // Validate & Reverse Sync to Left Pane Text
   try {
-    const parsed = JSON.parse(rawJSON);
+    const parsed = parseLooseJSON(rawJSON);
     currentParsedData = parsed;
     updateStatus(true, 'Valid JSON');
     hideError();
@@ -398,6 +427,9 @@ function syncRightToLeft(data, mode) {
     textInput.value = lines.join('\n');
   } else if (mode === 'escape' && typeof data === 'string') {
     textInput.value = data;
+  } else if (mode === 'json') {
+    // Direct raw JSON formatting back to Left Pane
+    textInput.value = JSON.stringify(data, null, 2);
   } else if (typeof data === 'object' && !Array.isArray(data) && data !== null) {
     // Format JSON object back to Key-Value plain text lines (name: Somchai)
     textInput.value = jsonToKeyValue(data);
@@ -421,7 +453,7 @@ function jsonToKeyValue(data) {
     } else if (Array.isArray(v)) {
       const formattedArray = v.map(item => (item === null ? 'null' : String(item))).join(', ');
       lines.push(`${k}: ${formattedArray}`);
-    } else if (v === null) {
+    } else if (v === null || v === undefined) {
       lines.push(`${k}: null`);
     } else {
       lines.push(`${k}: ${v}`);
@@ -430,17 +462,44 @@ function jsonToKeyValue(data) {
   return lines.join('\n');
 }
 
-// AUTO DETECT CONVERSION LOGIC
+// RELAXED JS / JSON PARSER (HANDLES undefined, UNQUOTED KEYS, SINGLE QUOTES & TRAILING COMMAS)
+function parseLooseJSON(text) {
+  if (!text || typeof text !== 'string') return null;
+  const trimmed = text.trim();
+
+  // 1. Standard JSON.parse
+  try {
+    return JSON.parse(trimmed);
+  } catch (e) {}
+
+  // 2. Pre-sanitize undefined -> null & trailing commas
+  try {
+    const sanitized = trimmed
+      .replace(/:\s*undefined\b/g, ': null')
+      .replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(sanitized);
+  } catch (e) {}
+
+  // 3. Relaxed JS Object Evaluation via Function
+  try {
+    const fn = new Function(`"use strict"; return (${trimmed});`);
+    const result = fn();
+    if (result !== undefined) return result;
+  } catch (e) {}
+
+  throw new SyntaxError('Unexpected token or invalid JSON format');
+}
+
+// AUTO DETECT CONVERSION LOGIC WITH DETECTED TYPE RETURN
 function autoDetectConvert(text, shouldCast, shouldSkipEmpty) {
   const trimmed = text.trim();
 
-  // 1. Try standard JSON parse
+  // 1. Try standard or relaxed JSON parse
   if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
     try {
-      return JSON.parse(trimmed);
-    } catch (e) {
-      // If JSON parse fails, check if stringified JSON with escaped quotes
-    }
+      const data = parseLooseJSON(trimmed);
+      return { data, detectedType: 'Raw JSON' };
+    } catch (e) {}
   }
 
   // 2. Try unescaping JSON string (e.g. "{\"a\": 1}")
@@ -448,7 +507,8 @@ function autoDetectConvert(text, shouldCast, shouldSkipEmpty) {
     try {
       const unescaped = trimmed.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
       if (unescaped.startsWith('{') || unescaped.startsWith('[')) {
-        return JSON.parse(unescaped);
+        const data = parseLooseJSON(unescaped);
+        return { data, detectedType: 'Stringified JSON' };
       }
     } catch (e) {}
   }
@@ -459,7 +519,7 @@ function autoDetectConvert(text, shouldCast, shouldSkipEmpty) {
     try {
       const csvResult = parseCSVText(text, shouldCast);
       if (Array.isArray(csvResult) && csvResult.length > 0 && typeof csvResult[0] === 'object') {
-        return csvResult;
+        return { data: csvResult, detectedType: 'CSV Table' };
       }
     } catch (e) {}
   }
@@ -471,16 +531,16 @@ function autoDetectConvert(text, shouldCast, shouldSkipEmpty) {
   });
 
   if (kvMatches >= Math.max(1, Math.floor(lines.length * 0.4))) {
-    return parseKeyValueText(text, shouldCast, shouldSkipEmpty);
+    return { data: parseKeyValueText(text, shouldCast, shouldSkipEmpty), detectedType: 'Key-Value' };
   }
 
   // 5. Fallback: Array of lines or raw string
   if (lines.length > 1) {
-    return parseLineArray(text, shouldCast, shouldSkipEmpty);
+    return { data: parseLineArray(text, shouldCast, shouldSkipEmpty), detectedType: 'Line Array' };
   }
 
   // Default cast single string or return literal
-  return shouldCast ? autoCastValue(trimmed) : trimmed;
+  return { data: shouldCast ? autoCastValue(trimmed) : trimmed, detectedType: 'Text Literal' };
 }
 
 // KEY-VALUE PARSER
