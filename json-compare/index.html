@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON Compare & Diff Studio | Side-by-Side Visual Inspector</title>
+  
+  <!-- Early Theme Initialization (Defaults to Light Mode) -->
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            neonCyan: '#00f2fe',
+            neonPurple: '#d946ef',
+            neonGreen: '#10b981',
+            slate: {
+              850: '#151f32',
+              900: '#0f172a',
+              950: '#070a13',
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Diff Line Highlighting Styles */
+    .diff-line-added {
+      background-color: rgba(16, 185, 129, 0.15) !important;
+      border-left: 4px solid #10b981;
+      color: #065f46 !important;
+    }
+    .dark .diff-line-added {
+      background-color: rgba(16, 185, 129, 0.22) !important;
+      border-left: 4px solid #34d399;
+      color: #a7f3d0 !important;
+    }
+
+    .diff-line-removed {
+      background-color: rgba(244, 63, 94, 0.15) !important;
+      border-left: 4px solid #f43f5e;
+      color: #9f1239 !important;
+      text-decoration: line-through;
+    }
+    .dark .diff-line-removed {
+      background-color: rgba(244, 63, 94, 0.22) !important;
+      border-left: 4px solid #fb7185;
+      color: #fecdd3 !important;
+    }
+
+    .diff-line-changed {
+      background-color: rgba(245, 158, 11, 0.15) !important;
+      border-left: 4px solid #f59e0b;
+      color: #92400e !important;
+    }
+    .dark .diff-line-changed {
+      background-color: rgba(245, 158, 11, 0.22) !important;
+      border-left: 4px solid #fbbf24;
+      color: #fef08a !important;
+    }
+
+    .diff-line-gap {
+      background-color: rgba(148, 163, 184, 0.08);
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(148, 163, 184, 0.05) 10px, rgba(148, 163, 184, 0.05) 20px);
+    }
+
+    /* JSON Token Coloring */
+    .json-key { color: #2563eb; }
+    .dark .json-key { color: #38bdf8; }
+
+    .json-string { color: #059669; }
+    .dark .json-string { color: #34d399; }
+
+    .json-number { color: #d97706; }
+    .dark .json-number { color: #fbbf24; }
+
+    .json-boolean { color: #9333ea; }
+    .dark .json-boolean { color: #c084fc; }
+
+    .json-null { color: #dc2626; }
+    .dark .json-null { color: #f87171; }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-toast {
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+
+<body class="h-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans flex flex-col antialiased selection:bg-indigo-500 selection:text-white overflow-hidden">
+
+  <!-- TOP HEADER TOOLBAR -->
+  <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20 transition-colors duration-300">
+    
+    <!-- Branding & Home Link -->
+    <div class="flex items-center gap-2.5">
+      <a href="../index.html" title="Back to Sandbox Home" class="p-2 text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 rounded-xl transition active:scale-95 flex items-center justify-center shrink-0">
+        <i data-lucide="home" class="w-4 h-4"></i>
+      </a>
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-0.5 shadow-lg shadow-indigo-500/20 shrink-0">
+        <div class="w-full h-full bg-white dark:bg-slate-950 rounded-[10px] flex items-center justify-center">
+          <i data-lucide="git-compare" class="w-5 h-5 text-indigo-600 dark:text-neonCyan"></i>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-base tracking-tight text-slate-900 dark:text-white">JSON Compare <span class="text-indigo-600 dark:text-neonCyan">Studio</span></h1>
+          <span class="px-2 py-0.5 text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-neonCyan border border-indigo-300 dark:border-indigo-500/30 rounded-full">v1.0</span>
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Side-by-Side Visual Diff & Structural Inspector</p>
+      </div>
+    </div>
+
+    <!-- Presets & Controls -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Presets Selector -->
+      <div class="relative flex items-center">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 absolute left-2.5 pointer-events-none"></i>
+        <select id="presetSelect" class="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-800 dark:text-slate-200 text-xs font-medium pl-8 pr-7 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700/60 focus:outline-none focus:border-indigo-500 dark:focus:border-neonCyan transition cursor-pointer appearance-none">
+          <option value="api">Preset: API v1 vs API v2</option>
+          <option value="longArray">Preset: Long Array (120+ Items Diff)</option>
+          <option value="profile">Preset: User Profile Updates</option>
+          <option value="config">Preset: Server Config Changes</option>
+        </select>
+        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2 pointer-events-none"></i>
+      </div>
+
+      <!-- Prettify Both -->
+      <button id="prettifyBothBtn" title="Format & Prettify Both JSONs" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-indigo-700 dark:text-cyan-300 border border-slate-300 dark:border-slate-700/70 hover:border-indigo-400 dark:hover:border-cyan-500/50 rounded-lg transition active:scale-95">
+        <i data-lucide="align-left" class="w-3.5 h-3.5"></i>
+        <span>Prettify Both</span>
+      </button>
+
+      <!-- Swap Left / Right -->
+      <button id="swapPanesBtn" title="Swap Left and Right JSON" class="p-1.5 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg transition active:scale-95">
+        <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Clear Both -->
+      <button id="clearBothBtn" title="Clear both inputs" class="p-1.5 text-slate-600 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg transition active:scale-95">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Theme Toggle -->
+      <button id="themeToggleBtn" title="Toggle Light/Dark Theme" class="p-1.5 text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg transition active:scale-95">
+        <i data-lucide="sun" id="themeSunIcon" class="w-4 h-4 hidden dark:inline-block text-amber-400"></i>
+        <i data-lucide="moon" id="themeMoonIcon" class="w-4 h-4 inline-block dark:hidden text-slate-600"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- SUMMARY BADGES & MODE SWITCHER STRIP -->
+  <div class="bg-slate-100 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800/80 px-4 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0 select-none z-10">
+    
+    <!-- Diff Badges Metrics & Step Navigators -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mr-0.5">Diff Results:</span>
+      
+      <!-- Added Group -->
+      <div id="addedGroup" class="flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        <span id="addedCount" class="cursor-pointer hover:underline" title="Click to jump to added line">+ 0 Added</span>
+        <div class="flex items-center ml-0.5 pl-1 border-l border-emerald-300/80 dark:border-emerald-700/60 gap-0.5">
+          <button id="addedPrevBtn" title="Previous Added Line (Up ⬆)" class="hover:text-emerald-900 dark:hover:text-white transition active:scale-95 p-0.5">
+            <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+          </button>
+          <button id="addedNextBtn" title="Next Added Line (Down ⬇)" class="hover:text-emerald-900 dark:hover:text-white transition active:scale-95 p-0.5">
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Removed Group -->
+      <div id="removedGroup" class="flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-100 dark:bg-rose-950/90 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30">
+        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+        <span id="removedCount" class="cursor-pointer hover:underline" title="Click to jump to removed line">- 0 Removed</span>
+        <div class="flex items-center ml-0.5 pl-1 border-l border-rose-300/80 dark:border-rose-700/60 gap-0.5">
+          <button id="removedPrevBtn" title="Previous Removed Line (Up ⬆)" class="hover:text-rose-900 dark:hover:text-white transition active:scale-95 p-0.5">
+            <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+          </button>
+          <button id="removedNextBtn" title="Next Removed Line (Down ⬇)" class="hover:text-rose-900 dark:hover:text-white transition active:scale-95 p-0.5">
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modified Group -->
+      <div id="changedGroup" class="flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-100 dark:bg-amber-950/90 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+        <span id="changedCount" class="cursor-pointer hover:underline" title="Click to jump to modified line">~ 0 Modified</span>
+        <div class="flex items-center ml-0.5 pl-1 border-l border-amber-300/80 dark:border-amber-700/60 gap-0.5">
+          <button id="changedPrevBtn" title="Previous Modified Line (Up ⬆)" class="hover:text-amber-900 dark:hover:text-white transition active:scale-95 p-0.5">
+            <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+          </button>
+          <button id="changedNextBtn" title="Next Modified Line (Down ⬇)" class="hover:text-amber-900 dark:hover:text-white transition active:scale-95 p-0.5">
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Global Step Navigation Up / Down Arrow Buttons -->
+      <div id="stepNavGroup" class="flex items-center gap-1 pl-1 ml-0.5 border-l border-slate-300 dark:border-slate-800">
+        <button id="prevDiffBtn" title="All Previous Differences (Step Up ⬆)" class="p-1 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/70 text-slate-600 dark:text-slate-300 transition active:scale-95 flex items-center justify-center">
+          <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+        </button>
+        <button id="nextDiffBtn" title="All Next Differences (Step Down ⬇)" class="p-1 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/70 text-slate-600 dark:text-slate-300 transition active:scale-95 flex items-center justify-center">
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+        </button>
+        <span id="diffStepCounter" class="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 ml-1 min-w-[50px]">0 / 0</span>
+      </div>
+
+      <span id="identicalBadge" class="hidden flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30">
+        <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"></i>
+        <span>✓ Identical Documents</span>
+      </span>
+    </div>
+
+    <!-- Mode Switcher (Diff Highlights vs Edit Mode vs List View) -->
+    <div class="flex items-center gap-2">
+      <div class="flex bg-white dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
+        <button id="diffModeBtn" class="px-2.5 py-1 text-xs font-medium rounded-md text-indigo-600 dark:text-neonCyan bg-slate-100 dark:bg-slate-850 shadow-sm transition flex items-center gap-1">
+          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+          <span>Diff Highlights</span>
+        </button>
+        <button id="editModeBtn" class="px-2.5 py-1 text-xs font-medium rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition flex items-center gap-1">
+          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+          <span>Edit Inputs</span>
+        </button>
+        <button id="changesListViewBtn" class="px-2.5 py-1 text-xs font-medium rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition flex items-center gap-1">
+          <i data-lucide="list-checks" class="w-3.5 h-3.5"></i>
+          <span>Changes List</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN COMPARISON WORKSPACE -->
+  <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+    
+    <!-- LEFT PANE: JSON A (ORIGINAL / SOURCE) -->
+    <section id="paneContainerA" class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-950/60 min-w-0">
+      <!-- Left Pane Toolbar -->
+      <div class="bg-slate-100/80 dark:bg-slate-900/60 px-4 py-2 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2">
+          <i data-lucide="file-json" class="w-4 h-4 text-indigo-600 dark:text-cyan-400"></i>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">JSON A (Original)</span>
+          <span id="statsA" class="text-[11px] text-slate-500 font-mono">(0 B)</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="clearABtn" class="text-[11px] text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition">
+            Clear
+          </button>
+          <button id="pasteABtn" class="text-[11px] text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-neonCyan flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded transition">
+            <i data-lucide="clipboard" class="w-3 h-3"></i>
+            <span>Paste</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Editor Container A -->
+      <div class="flex-1 flex overflow-hidden relative">
+        <!-- Line Numbers A -->
+        <div id="lineNumsA" class="w-12 py-3 px-2 bg-slate-50 dark:bg-slate-950/80 border-r border-slate-200 dark:border-slate-900 flex flex-col font-mono text-xs text-slate-400 dark:text-slate-600 select-none overflow-hidden text-right leading-6 shrink-0">
+          1
+        </div>
+
+        <div class="flex-1 relative overflow-hidden group">
+          <!-- Diff Highlight View A -->
+          <pre id="highlightA" class="absolute inset-0 py-3 px-4 font-mono text-sm leading-6 overflow-y-auto overflow-x-auto text-slate-800 dark:text-slate-200 selection:bg-rose-500/30 whitespace-pre-wrap break-words"></pre>
+
+          <!-- Raw Input Textarea A (Active during Edit mode or focus) -->
+          <textarea id="jsonInputA" spellcheck="false" placeholder="Paste or type JSON A (Original)..." 
+            class="hidden absolute inset-0 w-full h-full py-3 px-4 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-mono text-sm leading-6 resize-none focus:outline-none placeholder-slate-400 dark:placeholder-slate-600 overflow-y-auto whitespace-pre-wrap break-words"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANE: JSON B (MODIFIED / TARGET) -->
+    <section id="paneContainerB" class="flex-1 flex flex-col bg-slate-50/50 dark:bg-slate-950/40 min-w-0">
+      <!-- Right Pane Toolbar -->
+      <div class="bg-slate-100/80 dark:bg-slate-900/60 px-4 py-2 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2">
+          <i data-lucide="file-json" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">JSON B (Modified)</span>
+          <span id="statsB" class="text-[11px] text-slate-500 font-mono">(0 B)</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="clearBBtn" class="text-[11px] text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition">
+            Clear
+          </button>
+          <button id="pasteBBtn" class="text-[11px] text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-neonCyan flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded transition">
+            <i data-lucide="clipboard" class="w-3 h-3"></i>
+            <span>Paste</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Editor Container B -->
+      <div class="flex-1 flex overflow-hidden relative">
+        <!-- Line Numbers B -->
+        <div id="lineNumsB" class="w-12 py-3 px-2 bg-slate-50 dark:bg-slate-950/80 border-r border-slate-200 dark:border-slate-900 flex flex-col font-mono text-xs text-slate-400 dark:text-slate-600 select-none overflow-hidden text-right leading-6 shrink-0">
+          1
+        </div>
+
+        <div class="flex-1 relative overflow-hidden group">
+          <!-- Diff Highlight View B -->
+          <pre id="highlightB" class="absolute inset-0 py-3 px-4 font-mono text-sm leading-6 overflow-y-auto overflow-x-auto text-slate-800 dark:text-slate-200 selection:bg-emerald-500/30 whitespace-pre-wrap break-words"></pre>
+
+          <!-- Raw Input Textarea B (Active during Edit mode or focus) -->
+          <textarea id="jsonInputB" spellcheck="false" placeholder="Paste or type JSON B (Modified)..." 
+            class="hidden absolute inset-0 w-full h-full py-3 px-4 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-mono text-sm leading-6 resize-none focus:outline-none placeholder-slate-400 dark:placeholder-slate-600 overflow-y-auto whitespace-pre-wrap break-words"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- ALTERNATE VIEW: CHANGES LIST PANEL -->
+    <section id="changesListContainer" class="hidden flex-1 flex flex-col bg-white dark:bg-slate-950/80 p-4 overflow-y-auto min-w-0">
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 dark:border-slate-800">
+        <h2 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+          <i data-lucide="list-checks" class="w-4 h-4 text-indigo-600 dark:text-neonCyan"></i>
+          <span>Detailed Differences Log</span>
+        </h2>
+        <span id="changesSummaryText" class="text-xs text-slate-500 font-mono">0 differences detected</span>
+      </div>
+
+      <div id="changesListContent" class="space-y-2 font-mono text-xs">
+        <!-- Rendered list of differences -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- APPLICATION SCRIPT -->
+  <script src="./app.js"></script>
+</body>
+</html>
