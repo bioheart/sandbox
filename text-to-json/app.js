@@ -12,6 +12,7 @@ const PRESETS = {
 const textInput = document.getElementById('textInput');
 const jsonOutput = document.getElementById('jsonOutput');
 const jsonEditor = document.getElementById('jsonEditor');
+const jsonEditorWrapper = document.getElementById('jsonEditorWrapper');
 const inputTextLineNums = document.getElementById('inputTextLineNums');
 const jsonLineNums = document.getElementById('jsonLineNums');
 const modeSelect = document.getElementById('modeSelect');
@@ -38,6 +39,9 @@ const codeViewContainer = document.getElementById('codeViewContainer');
 const treeViewContainer = document.getElementById('treeViewContainer');
 const treeViewContent = document.getElementById('treeViewContent');
 
+const toggleEditModeBtn = document.getElementById('toggleEditModeBtn');
+const editModeLabel = document.getElementById('editModeLabel');
+
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 const themeSunIcon = document.getElementById('themeSunIcon');
 const themeMoonIcon = document.getElementById('themeMoonIcon');
@@ -45,6 +49,7 @@ const themeMoonIcon = document.getElementById('themeMoonIcon');
 let currentParsedData = null;
 let isMinified = false;
 let activeView = 'code'; // 'code' or 'tree'
+let isEditMode = false;  // Right pane edit mode toggle
 
 // INITIALIZATION
 window.addEventListener('DOMContentLoaded', () => {
@@ -74,7 +79,39 @@ function updateThemeIcons() {
   }
 }
 
-// EVENT LISTENERS
+// EDIT MODE TOGGLE
+if (toggleEditModeBtn) {
+  toggleEditModeBtn.addEventListener('click', () => {
+    isEditMode = !isEditMode;
+    updateEditModeUI();
+  });
+}
+
+function updateEditModeUI() {
+  if (!jsonEditor || !toggleEditModeBtn || !editModeLabel) return;
+
+  if (isEditMode) {
+    toggleEditModeBtn.className = 'flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-indigo-400 dark:border-cyan-500/50 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-neonCyan shadow-sm transition active:scale-95';
+    editModeLabel.textContent = 'Editing Active';
+    jsonEditor.readOnly = false;
+    jsonEditor.focus();
+    showToast('JSON Edit Mode Enabled (Syncing to Left Text)', 'info');
+  } else {
+    toggleEditModeBtn.className = 'flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition active:scale-95';
+    editModeLabel.textContent = 'Edit JSON';
+    jsonEditor.readOnly = true;
+    showToast('JSON Edit Mode Disabled', 'info');
+  }
+}
+
+// EVENT LISTENERS (LEFT PANE)
+textInput.addEventListener('focus', () => {
+  if (isEditMode) {
+    isEditMode = false;
+    updateEditModeUI();
+  }
+});
+
 textInput.addEventListener('input', () => {
   updateInputStatsAndLines();
   convertTextToJSON();
@@ -84,8 +121,15 @@ textInput.addEventListener('scroll', () => {
   inputTextLineNums.scrollTop = textInput.scrollTop;
 });
 
-// JSON EDITOR OVERLAY EVENT LISTENERS
+// EVENT LISTENERS (RIGHT PANE - JSON EDITOR)
 if (jsonEditor) {
+  jsonEditor.addEventListener('focus', () => {
+    if (!isEditMode) {
+      isEditMode = true;
+      updateEditModeUI();
+    }
+  });
+
   jsonEditor.addEventListener('scroll', () => {
     jsonOutput.scrollTop = jsonEditor.scrollTop;
     jsonOutput.scrollLeft = jsonEditor.scrollLeft;
@@ -93,11 +137,31 @@ if (jsonEditor) {
   });
 
   jsonEditor.addEventListener('input', () => {
+    if (!isEditMode) {
+      isEditMode = true;
+      updateEditModeUI();
+    }
     handleJSONEditorInput();
   });
 }
 
-modeSelect.addEventListener('change', () => convertTextToJSON());
+if (jsonEditorWrapper) {
+  jsonEditorWrapper.addEventListener('click', () => {
+    if (!isEditMode) {
+      isEditMode = true;
+      updateEditModeUI();
+    }
+  });
+}
+
+modeSelect.addEventListener('change', () => {
+  if (isEditMode && currentParsedData !== null) {
+    syncRightToLeft(currentParsedData, modeSelect.value);
+  } else {
+    convertTextToJSON();
+  }
+});
+
 autoTypeCast.addEventListener('change', () => convertTextToJSON());
 skipEmpty.addEventListener('change', () => convertTextToJSON());
 
@@ -110,6 +174,11 @@ presetSelect.addEventListener('change', (e) => {
     else if (selected === 'stringified') modeSelect.value = 'auto';
     else if (selected === 'keyvalue') modeSelect.value = 'kv';
     else modeSelect.value = 'auto';
+
+    if (isEditMode) {
+      isEditMode = false;
+      updateEditModeUI();
+    }
 
     updateInputStatsAndLines();
     convertTextToJSON();
@@ -168,6 +237,10 @@ swapBtn.addEventListener('click', () => {
   const jsonText = jsonEditor ? jsonEditor.value : JSON.stringify(currentParsedData, null, 2);
   if (jsonText.trim()) {
     textInput.value = jsonText;
+    if (isEditMode) {
+      isEditMode = false;
+      updateEditModeUI();
+    }
     updateInputStatsAndLines();
     convertTextToJSON();
     showToast('Swapped JSON into Text Input', 'info');
@@ -253,7 +326,7 @@ function convertTextToJSON() {
   setConvertTime(duration);
 }
 
-// HANDLE DIRECT EDITING IN RIGHT PANE (RIGHT -> PARSER)
+// HANDLE DIRECT EDITING IN RIGHT PANE (RIGHT -> LEFT REVERSE SYNC TO PLAIN TEXT)
 function handleJSONEditorInput() {
   const startTime = performance.now();
   const rawJSON = jsonEditor.value;
@@ -271,6 +344,8 @@ function handleJSONEditorInput() {
   if (!rawJSON.trim()) {
     jsonOutput.innerHTML = '';
     currentParsedData = {};
+    textInput.value = '';
+    updateInputStatsAndLines();
     updateStatus(true, 'Empty JSON');
     hideError();
     setConvertTime(0);
@@ -280,12 +355,15 @@ function handleJSONEditorInput() {
   // Live Syntax Highlight Layer
   jsonOutput.innerHTML = syntaxHighlightJSON(rawJSON);
 
-  // Validate JSON
+  // Validate & Reverse Sync to Left Pane Text
   try {
     const parsed = JSON.parse(rawJSON);
     currentParsedData = parsed;
     updateStatus(true, 'Valid JSON');
     hideError();
+
+    // Reverse Sync back to Left Pane (formatted as Plain Text / Key-Value / CSV)
+    syncRightToLeft(parsed, modeSelect.value);
 
     if (activeView === 'tree') {
       renderTreeView();
@@ -297,6 +375,59 @@ function handleJSONEditorInput() {
 
   const duration = (performance.now() - startTime).toFixed(1);
   setConvertTime(duration);
+}
+
+// SYNC RIGHT PANE JSON BACK TO LEFT PANE PLAIN TEXT
+function syncRightToLeft(data, mode) {
+  if (data === null || data === undefined) return;
+
+  if (mode === 'lines' && Array.isArray(data)) {
+    // Format JSON array back to line-by-line text list
+    textInput.value = data.map(item => (typeof item === 'object' ? JSON.stringify(item) : String(item))).join('\n');
+  } else if (mode === 'csv' && Array.isArray(data) && data.length > 0 && typeof data[0] === 'object') {
+    // Format JSON array of objects back to CSV headers & rows
+    const keys = Object.keys(data[0]);
+    const lines = [keys.join(',')];
+    data.forEach(row => {
+      const vals = keys.map(k => {
+        const val = row[k] !== undefined ? row[k] : '';
+        return String(val).includes(',') ? `"${val}"` : String(val);
+      });
+      lines.push(vals.join(','));
+    });
+    textInput.value = lines.join('\n');
+  } else if (mode === 'escape' && typeof data === 'string') {
+    textInput.value = data;
+  } else if (typeof data === 'object' && !Array.isArray(data) && data !== null) {
+    // Format JSON object back to Key-Value plain text lines (name: Somchai)
+    textInput.value = jsonToKeyValue(data);
+  } else if (Array.isArray(data) && data.every(item => typeof item !== 'object')) {
+    // Array of primitives -> line by line
+    textInput.value = data.map(item => (item === null ? 'null' : String(item))).join('\n');
+  } else {
+    // Fallback if data is raw primitive or non-standard structure
+    textInput.value = typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data);
+  }
+
+  updateInputStatsAndLines();
+}
+
+// HELPER: CONVERT JSON OBJECT TO KEY-VALUE PLAIN TEXT LINES
+function jsonToKeyValue(data) {
+  const lines = [];
+  for (const [k, v] of Object.entries(data)) {
+    if (k === '_unstructured' && Array.isArray(v)) {
+      v.forEach(line => lines.push(String(line)));
+    } else if (Array.isArray(v)) {
+      const formattedArray = v.map(item => (item === null ? 'null' : String(item))).join(', ');
+      lines.push(`${k}: ${formattedArray}`);
+    } else if (v === null) {
+      lines.push(`${k}: null`);
+    } else {
+      lines.push(`${k}: ${v}`);
+    }
+  }
+  return lines.join('\n');
 }
 
 // AUTO DETECT CONVERSION LOGIC
@@ -448,7 +579,7 @@ function autoCastValue(val) {
 function renderJSONOutput() {
   if (currentParsedData === null) {
     jsonOutput.innerHTML = '';
-    if (jsonEditor && document.activeElement !== jsonEditor) jsonEditor.value = '';
+    if (jsonEditor && !isEditMode) jsonEditor.value = '';
     updateJSONLineNums(1);
     updateOutputByteStats(0);
     return;
@@ -456,7 +587,7 @@ function renderJSONOutput() {
 
   const jsonStr = isMinified ? JSON.stringify(currentParsedData) : JSON.stringify(currentParsedData, null, 2);
   
-  if (jsonEditor && document.activeElement !== jsonEditor) {
+  if (jsonEditor && !isEditMode) {
     jsonEditor.value = jsonStr;
   }
   
@@ -485,7 +616,7 @@ function syntaxHighlightJSON(jsonString) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  return safeStr.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+  return safeStr.replace(/("(\\u[a-zA-Z0-9]{4}|\\.|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
     let cls = 'json-number';
     if (/^"/.test(match)) {
       if (/:$/.test(match)) {
@@ -502,15 +633,15 @@ function syntaxHighlightJSON(jsonString) {
   });
 }
 
-// INTERACTIVE COLLAPSIBLE TREE VIEW
+// INTERACTIVE COLLAPSIBLE & EDITABLE TREE VIEW
 function renderTreeView() {
   treeViewContent.innerHTML = '';
   if (currentParsedData === null) return;
-  treeViewContent.appendChild(buildTreeNode('root', currentParsedData, true));
+  treeViewContent.appendChild(buildTreeNode('root', currentParsedData, true, []));
   lucide.createIcons();
 }
 
-function buildTreeNode(key, value, isLast = true) {
+function buildTreeNode(key, value, isLast = true, path = []) {
   const container = document.createElement('div');
   container.className = 'font-mono text-xs leading-6 my-0.5';
 
@@ -531,7 +662,8 @@ function buildTreeNode(key, value, isLast = true) {
     toggleBtn.innerHTML = `<i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>`;
 
     const keySpan = document.createElement('span');
-    keySpan.className = 'json-key font-semibold';
+    keySpan.className = 'json-key font-semibold select-none';
+    keySpan.title = 'Key is locked (Read-only)';
     keySpan.textContent = key === 'root' ? '' : `"${key}": `;
 
     const metaSpan = document.createElement('span');
@@ -547,12 +679,12 @@ function buildTreeNode(key, value, isLast = true) {
 
     if (isArray) {
       value.forEach((item, idx) => {
-        childrenContainer.appendChild(buildTreeNode(idx, item, idx === value.length - 1));
+        childrenContainer.appendChild(buildTreeNode(idx, item, idx === value.length - 1, [...path, idx]));
       });
     } else {
       const entries = Object.entries(value);
       entries.forEach(([k, v], idx) => {
-        childrenContainer.appendChild(buildTreeNode(k, v, idx === entries.length - 1));
+        childrenContainer.appendChild(buildTreeNode(k, v, idx === entries.length - 1, [...path, k]));
       });
     }
 
@@ -571,34 +703,78 @@ function buildTreeNode(key, value, isLast = true) {
     container.appendChild(header);
     container.appendChild(childrenContainer);
   } else {
-    // Primitive values
+    // Primitive values (Editable Value, Locked Key)
     const row = document.createElement('div');
     row.className = 'flex items-center gap-1.5 pl-5 hover:bg-slate-200/40 dark:hover:bg-slate-900/40 rounded px-1 transition';
 
     const keySpan = document.createElement('span');
-    keySpan.className = 'json-key';
+    keySpan.className = 'json-key select-none';
+    keySpan.title = 'Key is locked (Read-only)';
     keySpan.textContent = key === 'root' ? '' : `"${key}": `;
 
+    // Editable Value Element
     const valSpan = document.createElement('span');
+    valSpan.setAttribute('contenteditable', 'true');
+    valSpan.setAttribute('spellcheck', 'false');
+    valSpan.title = 'Click to edit value (Key is locked)';
+
+    let baseClass = 'hover:bg-slate-200/80 dark:hover:bg-slate-800/80 focus:outline-none focus:ring-1 focus:ring-indigo-500 rounded px-1 cursor-text transition-all font-semibold ';
+
     if (type === 'string') {
-      valSpan.className = 'json-string';
+      valSpan.className = baseClass + 'json-string';
       valSpan.textContent = `"${value}"`;
     } else if (type === 'number') {
-      valSpan.className = 'json-number';
+      valSpan.className = baseClass + 'json-number';
       valSpan.textContent = value;
     } else if (type === 'boolean') {
-      valSpan.className = 'json-boolean';
+      valSpan.className = baseClass + 'json-boolean';
       valSpan.textContent = value;
     } else {
-      valSpan.className = 'json-null';
+      valSpan.className = baseClass + 'json-null';
       valSpan.textContent = 'null';
     }
+
+    // Save tree value edit event
+    const saveTreeValueEdit = () => {
+      let rawText = valSpan.textContent.trim();
+      // Strip outer quotes if string
+      if (type === 'string' && rawText.startsWith('"') && rawText.endsWith('"')) {
+        rawText = rawText.slice(1, -1);
+      }
+
+      const newValue = autoCastValue(rawText);
+
+      // Update data object at path
+      updateDataAtPath(currentParsedData, path, newValue);
+
+      // Update JSON Code View & Editor
+      const jsonStr = isMinified ? JSON.stringify(currentParsedData) : JSON.stringify(currentParsedData, null, 2);
+      if (jsonEditor) jsonEditor.value = jsonStr;
+      jsonOutput.innerHTML = syntaxHighlightJSON(jsonStr);
+
+      // Update Line Numbers & Stats
+      updateStatus(true, 'Valid JSON');
+      hideError();
+      updateOutputByteStats(new Blob([jsonStr]).size);
+      updateJSONLineNums(jsonStr.split('\n').length);
+
+      // Reverse Sync back to Left Pane Text
+      syncRightToLeft(currentParsedData, modeSelect.value);
+    };
+
+    valSpan.addEventListener('blur', saveTreeValueEdit);
+    valSpan.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        valSpan.blur();
+      }
+    });
 
     row.appendChild(keySpan);
     row.appendChild(valSpan);
     if (!isLast) {
       const comma = document.createElement('span');
-      comma.className = 'json-punct';
+      comma.className = 'json-punct select-none';
       comma.textContent = ',';
       row.appendChild(comma);
     }
@@ -607,6 +783,16 @@ function buildTreeNode(key, value, isLast = true) {
   }
 
   return container;
+}
+
+// HELPER: MUTATE OBJECT AT SPECIFIC PATH
+function updateDataAtPath(obj, path, newValue) {
+  if (!obj || !path || path.length === 0) return;
+  let current = obj;
+  for (let i = 0; i < path.length - 1; i++) {
+    current = current[path[i]];
+  }
+  current[path[path.length - 1]] = newValue;
 }
 
 // STATS & LINE NUMBERS UPDATES

@@ -287,9 +287,15 @@
           </div>
         </div>
 
-        <!-- Right View Mode Switcher -->
+        <!-- Right View Mode Switcher & Edit Mode -->
         <div class="flex items-center gap-2">
           <span id="jsonStats" class="text-[11px] text-slate-500 font-mono mr-1">(0 B)</span>
+
+          <!-- Edit Mode Toggle Button -->
+          <button id="toggleEditModeBtn" title="Enable Manual JSON Editing Mode" class="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition active:scale-95">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+            <span id="editModeLabel">Edit JSON</span>
+          </button>
 
           <div class="flex bg-white dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
             <button id="codeViewBtn" class="px-2 py-0.5 text-[11px] font-medium rounded-md text-indigo-600 dark:text-neonCyan bg-slate-100 dark:bg-slate-850 shadow-sm transition">
@@ -322,13 +328,13 @@
           </div>
 
           <!-- Synchronized Overlay Editor -->
-          <div class="flex-1 relative overflow-hidden group">
+          <div id="jsonEditorWrapper" class="flex-1 relative overflow-hidden group cursor-text" title="Click to edit JSON directly">
             <!-- Highlighted Background Layer -->
             <pre id="jsonOutput" class="absolute inset-0 py-3 px-4 font-mono text-sm leading-6 overflow-y-auto overflow-x-auto text-slate-800 dark:text-slate-200 selection:bg-purple-500/30 whitespace-pre-wrap break-words pointer-events-none"></pre>
 
-            <!-- Foreground Editable Textarea -->
-            <textarea id="jsonEditor" spellcheck="false" placeholder="JSON Editor (แก้ไขตรงนี้ได้เลย)..." 
-              class="absolute inset-0 w-full h-full py-3 px-4 bg-transparent text-slate-800 dark:text-slate-200 font-mono text-sm leading-6 resize-none focus:outline-none placeholder-slate-400 dark:placeholder-slate-600 overflow-y-auto whitespace-pre-wrap break-words caret-indigo-600 dark:caret-neonCyan"></textarea>
+            <!-- Foreground Textarea -->
+            <textarea id="jsonEditor" readonly spellcheck="false" placeholder="JSON output..." 
+              class="absolute inset-0 w-full h-full py-3 px-4 bg-transparent text-transparent caret-indigo-600 dark:caret-neonCyan font-mono text-sm leading-6 resize-none focus:outline-none placeholder-slate-400 dark:placeholder-slate-600 overflow-y-auto whitespace-pre-wrap break-words pointer-events-auto cursor-text"></textarea>
           </div>
         </div>
 
