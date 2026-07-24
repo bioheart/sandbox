@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Text to JSON Studio | Instant Split Converter & Formatter</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            neonCyan: '#00f2fe',
+            neonPurple: '#d946ef',
+            neonGreen: '#10b981',
+            slate: {
+              850: '#151f32',
+              900: '#0f172a',
+              950: '#070a13',
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style type="text/css">
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #070a13;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+
+    ::selection {
+      background: rgba(0, 242, 254, 0.25);
+      color: #ffffff;
+    }
+
+    /* JSON Syntax Highlighting */
+    .json-key { color: #00f2fe; font-weight: 500; }
+    .json-string { color: #34d399; }
+    .json-number { color: #facc15; }
+    .json-boolean { color: #f472b6; font-weight: 600; }
+    .json-null { color: #98a2b3; font-style: italic; }
+    .json-punct { color: #94a3b8; }
+    
+    /* Line numbers sync */
+    .editor-line-num {
+      user-select: none;
+      text-align: right;
+      color: #475569;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      line-height: 1.5rem;
+    }
+
+    /* Collapsible Tree styling */
+    .tree-node {
+      margin-left: 1.25rem;
+      border-left: 1px border-slate-700;
+    }
+    .tree-toggle {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      user-select: none;
+      transition: transform 0.15s ease;
+    }
+    .tree-toggle.collapsed svg {
+      transform: rotate(-90deg);
+    }
+
+    /* Toast animation */
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-toast {
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden antialiased selection:bg-neonCyan/30 selection:text-white">
+
+  <!-- TOP HEADER / TOOLBAR -->
+  <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20">
+    
+    <!-- App Branding -->
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 via-indigo-500 to-purple-600 p-0.5 shadow-lg shadow-cyan-500/20">
+        <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+          <i data-lucide="file-json" class="w-5 h-5 text-neonCyan"></i>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-base tracking-tight text-white">Text to JSON <span class="text-neonCyan">Studio</span></h1>
+          <span class="px-2 py-0.5 text-[10px] font-semibold bg-cyan-950/80 text-neonCyan border border-cyan-500/30 rounded-full">v1.0</span>
+        </div>
+        <p class="text-xs text-slate-400">Instant Split-Pane Converter & Formatter</p>
+      </div>
+    </div>
+
+    <!-- Mode Selector & Presets -->
+    <div class="flex flex-wrap items-center gap-2 bg-slate-950/60 p-1 rounded-xl border border-slate-800/80">
+      
+      <!-- Preset Selector -->
+      <div class="relative flex items-center">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400 absolute left-2.5 pointer-events-none"></i>
+        <select id="presetSelect" class="bg-slate-900 hover:bg-slate-850 text-slate-200 text-xs font-medium pl-8 pr-7 py-1.5 rounded-lg border border-slate-700/60 focus:outline-none focus:border-neonCyan transition cursor-pointer appearance-none">
+          <option value="keyvalue">Preset: Key-Value Pairs</option>
+          <option value="csv">Preset: CSV Table</option>
+          <option value="lines">Preset: Line-by-Line List</option>
+          <option value="stringified">Preset: Escaped JSON String</option>
+          <option value="log">Preset: Server Log / Config</option>
+          <option value="json">Preset: Pre-formatted JSON</option>
+        </select>
+        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 absolute right-2 pointer-events-none"></i>
+      </div>
+
+      <!-- Conversion Mode -->
+      <div class="relative flex items-center">
+        <i data-lucide="cpu" class="w-3.5 h-3.5 text-neonCyan absolute left-2.5 pointer-events-none"></i>
+        <select id="modeSelect" class="bg-slate-900 hover:bg-slate-850 text-slate-200 text-xs font-medium pl-8 pr-7 py-1.5 rounded-lg border border-slate-700/60 focus:outline-none focus:border-neonCyan transition cursor-pointer appearance-none">
+          <option value="auto">Mode: ⚡ Auto Smart Detect</option>
+          <option value="kv">Mode: 🔑 Key-Value Extractor</option>
+          <option value="lines">Mode: 📑 Line Array</option>
+          <option value="csv">Mode: 📊 CSV / Delimited</option>
+          <option value="escape">Mode: 🔤 String Escape</option>
+        </select>
+        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 absolute right-2 pointer-events-none"></i>
+      </div>
+    </div>
+
+    <!-- Right Action Buttons -->
+    <div class="flex items-center gap-2">
+      <!-- Prettify Dropdown / Button -->
+      <button id="prettifyBtn" title="Prettify JSON (2 spaces)" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-slate-850 hover:bg-slate-800 text-cyan-300 border border-slate-700/70 hover:border-cyan-500/50 rounded-lg transition active:scale-95">
+        <i data-lucide="align-left" class="w-3.5 h-3.5"></i>
+        <span>Prettify</span>
+      </button>
+
+      <!-- Minify -->
+      <button id="minifyBtn" title="Minify JSON (Compact 1 line)" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-slate-850 hover:bg-slate-800 text-slate-300 border border-slate-700/70 hover:border-slate-600 rounded-lg transition active:scale-95">
+        <i data-lucide="minimize-2" class="w-3.5 h-3.5"></i>
+        <span>Minify</span>
+      </button>
+
+      <!-- Copy -->
+      <button id="copyBtn" title="Copy JSON to Clipboard" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-lg shadow-md shadow-cyan-500/15 transition active:scale-95">
+        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+        <span>Copy JSON</span>
+      </button>
+
+      <!-- Download -->
+      <button id="downloadBtn" title="Download .json File" class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-slate-850 hover:bg-slate-800 text-slate-300 border border-slate-700/70 hover:border-slate-600 rounded-lg transition active:scale-95">
+        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+        <span class="hidden sm:inline">Download</span>
+      </button>
+
+      <!-- Swap button -->
+      <button id="swapBtn" title="Swap JSON to Input Text" class="p-1.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg transition">
+        <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Clear -->
+      <button id="clearBtn" title="Clear all text" class="p-1.5 text-slate-400 hover:text-rose-400 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg transition">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN SPLIT WORKSPACE -->
+  <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+    
+    <!-- LEFT PANE: PLAIN TEXT INPUT -->
+    <section class="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-slate-800/80 bg-slate-950/60 min-w-0">
+      
+      <!-- Left Pane Toolbar -->
+      <div class="bg-slate-900/60 px-4 py-2 border-b border-slate-800/80 flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2">
+          <i data-lucide="file-text" class="w-4 h-4 text-cyan-400"></i>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Text Input</span>
+          <span id="textCharStats" class="text-[11px] text-slate-500 font-mono">(0 chars, 0 lines)</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Parsing Toggles -->
+          <label class="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-200 cursor-pointer select-none">
+            <input type="checkbox" id="autoTypeCast" checked class="rounded border-slate-700 bg-slate-900 text-neonCyan focus:ring-0 accent-neonCyan">
+            <span>Auto Types</span>
+          </label>
+          
+          <label class="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-200 cursor-pointer select-none">
+            <input type="checkbox" id="skipEmpty" checked class="rounded border-slate-700 bg-slate-900 text-neonCyan focus:ring-0 accent-neonCyan">
+            <span>Ignore Empty Lines</span>
+          </label>
+
+          <button id="pasteTextBtn" class="text-[11px] text-slate-400 hover:text-neonCyan flex items-center gap-1 px-1.5 py-0.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded transition">
+            <i data-lucide="clipboard" class="w-3 h-3"></i>
+            <span>Paste</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Left Text Editor Box -->
+      <div class="flex-1 flex overflow-hidden relative group">
+        <!-- Line Numbers -->
+        <div id="inputTextLineNums" class="w-12 py-3 px-2 bg-slate-950/80 border-r border-slate-900 flex flex-col font-mono text-xs text-slate-600 select-none overflow-hidden text-right leading-6 shrink-0">
+          1
+        </div>
+
+        <!-- Textarea -->
+        <textarea id="textInput" spellcheck="false" placeholder="วาง หรือ พิมพ์ ข้อความธรรมดา / Key-Value / CSV / Logs ที่นี่..." 
+          class="flex-1 w-full h-full py-3 px-4 bg-transparent text-slate-200 font-mono text-sm leading-6 resize-none focus:outline-none placeholder-slate-600 overflow-y-auto"></textarea>
+      </div>
+    </section>
+
+
+    <!-- RIGHT PANE: JSON OUTPUT -->
+    <section class="flex-1 flex flex-col bg-slate-950/40 min-w-0">
+      
+      <!-- Right Pane Toolbar -->
+      <div class="bg-slate-900/60 px-4 py-2 border-b border-slate-800/80 flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5">
+            <i data-lucide="brackets" class="w-4 h-4 text-purple-400"></i>
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">JSON Output</span>
+          </div>
+
+          <!-- Live Status Badge -->
+          <div id="statusBadge" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-500/30">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="statusBadgeText">Valid JSON</span>
+          </div>
+        </div>
+
+        <!-- Right View Mode Switcher -->
+        <div class="flex items-center gap-2">
+          <span id="jsonStats" class="text-[11px] text-slate-500 font-mono mr-1">(0 B)</span>
+
+          <div class="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+            <button id="codeViewBtn" class="px-2 py-0.5 text-[11px] font-medium rounded-md text-neonCyan bg-slate-850 shadow-sm transition">
+              Code View
+            </button>
+            <button id="treeViewBtn" class="px-2 py-0.5 text-[11px] font-medium rounded-md text-slate-400 hover:text-slate-200 transition">
+              Tree View
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Output Content Box -->
+      <div class="flex-1 flex flex-col overflow-hidden relative">
+        
+        <!-- Error Alert Bar (hidden by default) -->
+        <div id="errorAlert" class="hidden bg-rose-950/90 border-b border-rose-800/80 px-4 py-2.5 text-rose-200 text-xs font-mono flex items-start gap-2 shrink-0">
+          <i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+          <div class="flex-1">
+            <div class="font-semibold text-rose-300">Parse Warning / Error</div>
+            <div id="errorMessage" class="text-rose-200/90 mt-0.5">Unexpected syntax</div>
+          </div>
+        </div>
+
+        <!-- CODE VIEW -->
+        <div id="codeViewContainer" class="flex-1 flex overflow-hidden">
+          <!-- Line Numbers -->
+          <div id="jsonLineNums" class="w-12 py-3 px-2 bg-slate-950/80 border-r border-slate-900 flex flex-col font-mono text-xs text-slate-600 select-none overflow-hidden text-right leading-6 shrink-0">
+            1
+          </div>
+
+          <!-- Highlighted JSON Code Display -->
+          <pre id="jsonOutput" class="flex-1 py-3 px-4 font-mono text-sm leading-6 overflow-y-auto overflow-x-auto text-slate-200 selection:bg-purple-500/30"></pre>
+        </div>
+
+        <!-- TREE VIEW (Collapsible) -->
+        <div id="treeViewContainer" class="flex-1 py-3 px-6 font-mono text-sm leading-6 overflow-y-auto text-slate-200 hidden">
+          <div id="treeViewContent"></div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- BOTTOM STATUS BAR -->
+  <footer class="bg-slate-900/90 border-t border-slate-800/80 px-4 py-1.5 text-xs text-slate-400 flex items-center justify-between shrink-0 z-20 font-mono">
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-1 text-slate-300">
+        <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span>Live Auto-Convert</span>
+      </div>
+      <div class="hidden sm:block text-slate-600">|</div>
+      <div class="hidden sm:flex items-center gap-2 text-slate-400">
+        <span>Encoding: <strong class="text-slate-200">UTF-8</strong></span>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-3 text-[11px]">
+      <span id="convertTime" class="text-slate-500">Converted in 0ms</span>
+      <span class="text-slate-700">•</span>
+      <span class="text-slate-400">Text to JSON Studio</span>
+    </div>
+  </footer>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-10 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- APPLICATION SCRIPT LOGIC -->
+  <script>
+    // PRESET SAMPLES
+    const PRESETS = {
+      keyvalue: `name: Somchai Jaidee\nage: 29\nis_developer: true\nskills: JavaScript, Python, HTML\ncity: Bangkok\nsalary: 45000\nproject_completed: null`,
+      csv: `id,name,role,department,active\n101,Alice Smith,Frontend Lead,Engineering,true\n102,Bob Johnson,UI Designer,Design,true\n103,Charlie Brown,QA Analyst,Quality,false`,
+      lines: `Apple iPhone 15 Pro\nSamsung Galaxy S24 Ultra\nGoogle Pixel 8 Pro\nMacBook Pro M3\niPad Air 5`,
+      stringified: `{\\"event\\": \\"user_signup\\", \\"user_id\\": 98412, \\"metadata\\": {\\"source\\": \\"facebook_ads\\", \\"campaign\\": \\"summer_sale\\"}, \\"timestamp\\": 1721838000}`,
+      log: `[INFO] 2026-07-24 16:20:00 - User user_88 logged in from IP 192.168.1.50 status=success duration=12ms`,
+      json: `{\n  "status": "success",\n  "code": 200,\n  "data": {\n    "user": {\n      "id": 42,\n      "username": "bioheart",\n      "roles": ["admin", "developer"]\n    },\n    "active_session": true\n  }\n}`
+    };
+
+    // DOM ELEMENTS
+    const textInput = document.getElementById('textInput');
+    const jsonOutput = document.getElementById('jsonOutput');
+    const inputTextLineNums = document.getElementById('inputTextLineNums');
+    const jsonLineNums = document.getElementById('jsonLineNums');
+    const modeSelect = document.getElementById('modeSelect');
+    const presetSelect = document.getElementById('presetSelect');
+    const statusBadge = document.getElementById('statusBadge');
+    const statusBadgeText = document.getElementById('statusBadgeText');
+    const errorAlert = document.getElementById('errorAlert');
+    const errorMessage = document.getElementById('errorMessage');
+    const textCharStats = document.getElementById('textCharStats');
+    const jsonStats = document.getElementById('jsonStats');
+    const convertTime = document.getElementById('convertTime');
+    const prettifyBtn = document.getElementById('prettifyBtn');
+    const minifyBtn = document.getElementById('minifyBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const swapBtn = document.getElementById('swapBtn');
+    const pasteTextBtn = document.getElementById('pasteTextBtn');
+    const autoTypeCast = document.getElementById('autoTypeCast');
+    const skipEmpty = document.getElementById('skipEmpty');
+    const codeViewBtn = document.getElementById('codeViewBtn');
+    const treeViewBtn = document.getElementById('treeViewBtn');
+    const codeViewContainer = document.getElementById('codeViewContainer');
+    const treeViewContainer = document.getElementById('treeViewContainer');
+    const treeViewContent = document.getElementById('treeViewContent');
+
+    let currentParsedData = null;
+    let isMinified = false;
+    let activeView = 'code'; // 'code' or 'tree'
+
+    // INITIALIZATION
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      textInput.value = PRESETS.keyvalue;
+      updateInputStatsAndLines();
+      convertTextToJSON();
+    });
+
+    // EVENT LISTENERS
+    textInput.addEventListener('input', () => {
+      updateInputStatsAndLines();
+      convertTextToJSON();
+    });
+
+    textInput.addEventListener('scroll', () => {
+      inputTextLineNums.scrollTop = textInput.scrollTop;
+    });
+
+    jsonOutput.addEventListener('scroll', () => {
+      jsonLineNums.scrollTop = jsonOutput.scrollTop;
+    });
+
+    modeSelect.addEventListener('change', () => convertTextToJSON());
+    autoTypeCast.addEventListener('change', () => convertTextToJSON());
+    skipEmpty.addEventListener('change', () => convertTextToJSON());
+
+    presetSelect.addEventListener('change', (e) => {
+      const selected = e.target.value;
+      if (PRESETS[selected]) {
+        textInput.value = PRESETS[selected];
+        if (selected === 'csv') modeSelect.value = 'csv';
+        else if (selected === 'lines') modeSelect.value = 'lines';
+        else if (selected === 'stringified') modeSelect.value = 'auto';
+        else if (selected === 'keyvalue') modeSelect.value = 'kv';
+        else modeSelect.value = 'auto';
+
+        updateInputStatsAndLines();
+        convertTextToJSON();
+        showToast(`Loaded ${e.target.options[e.target.selectedIndex].text}`, 'info');
+      }
+    });
+
+    prettifyBtn.addEventListener('click', () => {
+      isMinified = false;
+      renderJSONOutput();
+      showToast('JSON Formatted (2 spaces)', 'success');
+    });
+
+    minifyBtn.addEventListener('click', () => {
+      isMinified = true;
+      renderJSONOutput();
+      showToast('JSON Minified', 'success');
+    });
+
+    copyBtn.addEventListener('click', () => {
+      const textToCopy = isMinified ? JSON.stringify(currentParsedData) : JSON.stringify(currentParsedData, null, 2);
+      if (!textToCopy) return;
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        showToast('Copied JSON to clipboard!', 'success');
+      }).catch(() => {
+        showToast('Failed to copy', 'error');
+      });
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!currentParsedData && currentParsedData !== 0 && currentParsedData !== false) {
+        showToast('Nothing to download', 'error');
+        return;
+      }
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentParsedData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `data_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Downloaded JSON file', 'success');
+    });
+
+    clearBtn.addEventListener('click', () => {
+      textInput.value = '';
+      updateInputStatsAndLines();
+      convertTextToJSON();
+      showToast('Cleared input text', 'info');
+    });
+
+    swapBtn.addEventListener('click', () => {
+      if (currentParsedData !== null) {
+        textInput.value = JSON.stringify(currentParsedData, null, 2);
+        updateInputStatsAndLines();
+        convertTextToJSON();
+        showToast('Swapped JSON into Text Input', 'info');
+      }
+    });
+
+    pasteTextBtn.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          textInput.value = text;
+          updateInputStatsAndLines();
+          convertTextToJSON();
+          showToast('Pasted from clipboard', 'success');
+        }
+      } catch (err) {
+        showToast('Cannot access clipboard. Please press Ctrl+V', 'error');
+      }
+    });
+
+    codeViewBtn.addEventListener('click', () => {
+      activeView = 'code';
+      codeViewBtn.className = 'px-2 py-0.5 text-[11px] font-medium rounded-md text-neonCyan bg-slate-850 shadow-sm transition';
+      treeViewBtn.className = 'px-2 py-0.5 text-[11px] font-medium rounded-md text-slate-400 hover:text-slate-200 transition';
+      codeViewContainer.classList.remove('hidden');
+      treeViewContainer.classList.add('hidden');
+    });
+
+    treeViewBtn.addEventListener('click', () => {
+      activeView = 'tree';
+      treeViewBtn.className = 'px-2 py-0.5 text-[11px] font-medium rounded-md text-neonCyan bg-slate-850 shadow-sm transition';
+      codeViewBtn.className = 'px-2 py-0.5 text-[11px] font-medium rounded-md text-slate-400 hover:text-slate-200 transition';
+      treeViewContainer.classList.remove('hidden');
+      codeViewContainer.classList.add('hidden');
+      renderTreeView();
+    });
+
+    // CORE TEXT TO JSON CONVERSION ENGINE
+    function convertTextToJSON() {
+      const startTime = performance.now();
+      const rawText = textInput.value;
+      const mode = modeSelect.value;
+      const shouldCast = autoTypeCast.checked;
+      const shouldSkipEmpty = skipEmpty.checked;
+
+      hideError();
+      currentParsedData = null;
+
+      if (!rawText.trim()) {
+        currentParsedData = {};
+        renderJSONOutput();
+        updateStatus(true, 'Empty Input');
+        setConvertTime(0);
+        return;
+      }
+
+      try {
+        let result = null;
+
+        if (mode === 'auto') {
+          result = autoDetectConvert(rawText, shouldCast, shouldSkipEmpty);
+        } else if (mode === 'kv') {
+          result = parseKeyValueText(rawText, shouldCast, shouldSkipEmpty);
+        } else if (mode === 'lines') {
+          result = parseLineArray(rawText, shouldCast, shouldSkipEmpty);
+        } else if (mode === 'csv') {
+          result = parseCSVText(rawText, shouldCast);
+        } else if (mode === 'escape') {
+          result = rawText; // Will be JSON stringified
+        }
+
+        currentParsedData = result;
+        updateStatus(true, 'Valid JSON');
+        renderJSONOutput();
+      } catch (err) {
+        showError(err.message || 'Failed to parse text into JSON');
+        updateStatus(false, 'Parse Error');
+        currentParsedData = { error: err.message || 'Parse Error', raw_text: rawText };
+        renderJSONOutput();
+      }
+
+      const duration = (performance.now() - startTime).toFixed(1);
+      setConvertTime(duration);
+    }
+
+    // AUTO DETECT CONVERSION LOGIC
+    function autoDetectConvert(text, shouldCast, shouldSkipEmpty) {
+      const trimmed = text.trim();
+
+      // 1. Try standard JSON parse
+      if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try {
+          return JSON.parse(trimmed);
+        } catch (e) {
+          // If JSON parse fails, check if stringified JSON with escaped quotes
+        }
+      }
+
+      // 2. Try unescaping JSON string (e.g. "{\"a\": 1}")
+      if (trimmed.includes('\\"') || trimmed.includes('\\n')) {
+        try {
+          const unescaped = trimmed.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          if (unescaped.startsWith('{') || unescaped.startsWith('[')) {
+            return JSON.parse(unescaped);
+          }
+        } catch (e) {}
+      }
+
+      // 3. Check if CSV (has header row and comma/tab delimiters in line 1)
+      const lines = trimmed.split(/\r?\n/).filter(l => shouldSkipEmpty ? l.trim() !== '' : true);
+      if (lines.length > 1 && (lines[0].includes(',') || lines[0].includes('\t'))) {
+        try {
+          const csvResult = parseCSVText(text, shouldCast);
+          if (Array.isArray(csvResult) && csvResult.length > 0 && typeof csvResult[0] === 'object') {
+            return csvResult;
+          }
+        } catch (e) {}
+      }
+
+      // 4. Check if Key-Value pairs (lines with : or =)
+      let kvMatches = 0;
+      lines.forEach(line => {
+        if (/^[\w\-\s.]+[:=->]\s*/.test(line.trim())) kvMatches++;
+      });
+
+      if (kvMatches >= Math.max(1, Math.floor(lines.length * 0.4))) {
+        return parseKeyValueText(text, shouldCast, shouldSkipEmpty);
+      }
+
+      // 5. Fallback: Array of lines or raw string
+      if (lines.length > 1) {
+        return parseLineArray(text, shouldCast, shouldSkipEmpty);
+      }
+
+      // Default cast single string or return literal
+      return shouldCast ? autoCastValue(trimmed) : trimmed;
+    }
+
+    // KEY-VALUE PARSER
+    function parseKeyValueText(text, shouldCast, shouldSkipEmpty) {
+      const lines = text.split(/\r?\n/);
+      const result = {};
+
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed && shouldSkipEmpty) return;
+        if (!trimmed) return;
+
+        // Match key: value or key = value or key -> value
+        const delimiterMatch = trimmed.match(/^([^:=->]+)[:=->]\s*(.*)$/);
+
+        if (delimiterMatch) {
+          const key = delimiterMatch[1].trim();
+          let rawVal = delimiterMatch[2].trim();
+
+          // Handle array values like "a, b, c"
+          let val = rawVal;
+          if (rawVal.includes(',') && !rawVal.startsWith('[') && !rawVal.startsWith('{')) {
+            val = rawVal.split(',').map(s => s.trim()).filter(Boolean);
+            if (shouldCast) val = val.map(autoCastValue);
+          } else if (shouldCast) {
+            val = autoCastValue(rawVal);
+          }
+
+          result[key] = val;
+        } else {
+          // Lines without delimiter placed in a "_raw_lines" or unmapped key
+          if (!result._unstructured) result._unstructured = [];
+          result._unstructured.push(shouldCast ? autoCastValue(trimmed) : trimmed);
+        }
+      });
+
+      return result;
+    }
+
+    // LINE ARRAY PARSER
+    function parseLineArray(text, shouldCast, shouldSkipEmpty) {
+      const lines = text.split(/\r?\n/);
+      const arr = [];
+      lines.forEach(line => {
+        const item = line.trim();
+        if (!item && shouldSkipEmpty) return;
+        arr.push(shouldCast ? autoCastValue(item) : item);
+      });
+      return arr;
+    }
+
+    // CSV / DELIMITED PARSER
+    function parseCSVText(text, shouldCast) {
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (lines.length === 0) return [];
+
+      const delimiter = lines[0].includes('\t') ? '\t' : ',';
+      const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
+
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, ''));
+        const rowObj = {};
+        headers.forEach((h, idx) => {
+          const raw = cols[idx] !== undefined ? cols[idx] : '';
+          rowObj[h] = shouldCast ? autoCastValue(raw) : raw;
+        });
+        rows.push(rowObj);
+      }
+      return rows;
+    }
+
+    // AUTO TYPE CAST HELPER
+    function autoCastValue(val) {
+      if (typeof val !== 'string') return val;
+      const lower = val.toLowerCase();
+      if (lower === 'true') return true;
+      if (lower === 'false') return false;
+      if (lower === 'null' || lower === 'nil' || lower === 'none') return null;
+      if (lower === 'undefined') return undefined;
+
+      // Numeric check
+      if (/^-?\d+(\.\d+)?$/.test(val) && Math.abs(Number(val)) < Number.MAX_SAFE_INTEGER) {
+        return Number(val);
+      }
+
+      // Strip outer quotes if string wrapped
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        return val.slice(1, -1);
+      }
+
+      return val;
+    }
+
+    // RENDER JSON OUTPUT & SYNTAX HIGHLIGHTING
+    function renderJSONOutput() {
+      if (currentParsedData === null) {
+        jsonOutput.innerHTML = '';
+        updateJSONLineNums(1);
+        updateOutputByteStats(0);
+        return;
+      }
+
+      const jsonStr = isMinified ? JSON.stringify(currentParsedData) : JSON.stringify(currentParsedData, null, 2);
+      updateOutputByteStats(new Blob([jsonStr]).size);
+
+      // Syntax highlight
+      const highlightedHTML = syntaxHighlightJSON(jsonStr);
+      jsonOutput.innerHTML = highlightedHTML;
+
+      // Update Output Line Numbers
+      const lineCount = jsonStr.split('\n').length;
+      updateJSONLineNums(lineCount);
+
+      if (activeView === 'tree') {
+        renderTreeView();
+      }
+    }
+
+    // SYNTAX HIGHLIGHTER
+    function syntaxHighlightJSON(jsonString) {
+      if (!jsonString) return '';
+      
+      // Escape HTML entities first
+      const safeStr = jsonString
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      return safeStr.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        let cls = 'json-number';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'json-key';
+          } else {
+            cls = 'json-string';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'json-boolean';
+        } else if (/null/.test(match)) {
+          cls = 'json-null';
+        }
+        return `<span class="${cls}">${match}</span>`;
+      });
+    }
+
+    // INTERACTIVE COLLAPSIBLE TREE VIEW
+    function renderTreeView() {
+      treeViewContent.innerHTML = '';
+      if (currentParsedData === null) return;
+      treeViewContent.appendChild(buildTreeNode('root', currentParsedData, true));
+      lucide.createIcons();
+    }
+
+    function buildTreeNode(key, value, isLast = true) {
+      const container = document.createElement('div');
+      container.className = 'font-mono text-xs leading-6 my-0.5';
+
+      const type = Array.isArray(value) ? 'array' : (value === null ? 'null' : typeof value);
+
+      if (type === 'object' || type === 'array') {
+        const isArray = type === 'array';
+        const keys = isArray ? value : Object.keys(value);
+        const count = isArray ? value.length : keys.length;
+        const openChar = isArray ? '[' : '{';
+        const closeChar = isArray ? ']' : '}';
+
+        const header = document.createElement('div');
+        header.className = 'flex items-center gap-1 hover:bg-slate-900/60 rounded px-1 -ml-1 transition group';
+
+        const toggleBtn = document.createElement('span');
+        toggleBtn.className = 'tree-toggle text-slate-500 group-hover:text-neonCyan';
+        toggleBtn.innerHTML = `<i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>`;
+
+        const keySpan = document.createElement('span');
+        keySpan.className = 'json-key font-semibold';
+        keySpan.textContent = key === 'root' ? '' : `"${key}": `;
+
+        const metaSpan = document.createElement('span');
+        metaSpan.className = 'text-slate-500 text-[11px] font-sans';
+        metaSpan.textContent = `${openChar} ${count} ${isArray ? 'items' : 'keys'} ${closeChar}`;
+
+        header.appendChild(toggleBtn);
+        if (key !== 'root') header.appendChild(keySpan);
+        header.appendChild(metaSpan);
+
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = 'tree-node border-l border-slate-800/80 pl-3 ml-2 mt-0.5';
+
+        if (isArray) {
+          value.forEach((item, idx) => {
+            childrenContainer.appendChild(buildTreeNode(idx, item, idx === value.length - 1));
+          });
+        } else {
+          const entries = Object.entries(value);
+          entries.forEach(([k, v], idx) => {
+            childrenContainer.appendChild(buildTreeNode(k, v, idx === entries.length - 1));
+          });
+        }
+
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isCollapsed = childrenContainer.classList.contains('hidden');
+          if (isCollapsed) {
+            childrenContainer.classList.remove('hidden');
+            toggleBtn.classList.remove('collapsed');
+          } else {
+            childrenContainer.classList.add('hidden');
+            toggleBtn.classList.add('collapsed');
+          }
+        });
+
+        container.appendChild(header);
+        container.appendChild(childrenContainer);
+      } else {
+        // Primitive values
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-1.5 pl-5 hover:bg-slate-900/40 rounded px-1 transition';
+
+        const keySpan = document.createElement('span');
+        keySpan.className = 'json-key';
+        keySpan.textContent = key === 'root' ? '' : `"${key}": `;
+
+        const valSpan = document.createElement('span');
+        if (type === 'string') {
+          valSpan.className = 'json-string';
+          valSpan.textContent = `"${value}"`;
+        } else if (type === 'number') {
+          valSpan.className = 'json-number';
+          valSpan.textContent = value;
+        } else if (type === 'boolean') {
+          valSpan.className = 'json-boolean';
+          valSpan.textContent = value;
+        } else {
+          valSpan.className = 'json-null';
+          valSpan.textContent = 'null';
+        }
+
+        row.appendChild(keySpan);
+        row.appendChild(valSpan);
+        if (!isLast) {
+          const comma = document.createElement('span');
+          comma.className = 'json-punct';
+          comma.textContent = ',';
+          row.appendChild(comma);
+        }
+
+        container.appendChild(row);
+      }
+
+      return container;
+    }
+
+    // STATS & LINE NUMBERS UPDATES
+    function updateInputStatsAndLines() {
+      const text = textInput.value;
+      const lines = text.split('\n');
+      const charCount = text.length;
+      const lineCount = lines.length;
+
+      textCharStats.textContent = `(${charCount.toLocaleString()} chars, ${lineCount.toLocaleString()} lines)`;
+
+      // Update Input Line numbers
+      let numsHTML = '';
+      for (let i = 1; i <= lineCount; i++) {
+        numsHTML += `${i}<br>`;
+      }
+      inputTextLineNums.innerHTML = numsHTML;
+    }
+
+    function updateJSONLineNums(count) {
+      let numsHTML = '';
+      for (let i = 1; i <= count; i++) {
+        numsHTML += `${i}<br>`;
+      }
+      jsonLineNums.innerHTML = numsHTML;
+    }
+
+    function updateOutputByteStats(bytes) {
+      if (bytes < 1024) {
+        jsonStats.textContent = `(${bytes} B)`;
+      } else {
+        jsonStats.textContent = `(${(bytes / 1024).toFixed(2)} KB)`;
+      }
+    }
+
+    function setConvertTime(ms) {
+      convertTime.textContent = `Converted in ${ms}ms`;
+    }
+
+    function updateStatus(isValid, text) {
+      if (isValid) {
+        statusBadge.className = 'flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-500/30';
+        statusBadgeText.textContent = text;
+      } else {
+        statusBadge.className = 'flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-950/80 text-rose-400 border border-rose-500/30';
+        statusBadgeText.textContent = text;
+      }
+    }
+
+    function showError(msg) {
+      errorMessage.textContent = msg;
+      errorAlert.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function hideError() {
+      errorAlert.classList.add('hidden');
+    }
+
+    // TOAST NOTIFICATIONS SYSTEM
+    function showToast(message, type = 'info') {
+      const toastContainer = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+
+      let bgBorder = 'bg-slate-900 border-slate-700 text-slate-200';
+      let icon = 'info';
+
+      if (type === 'success') {
+        bgBorder = 'bg-emerald-950/95 border-emerald-500/40 text-emerald-200';
+        icon = 'check-circle-2';
+      } else if (type === 'error') {
+        bgBorder = 'bg-rose-950/95 border-rose-500/40 text-rose-200';
+        icon = 'alert-triangle';
+      }
+
+      toast.className = `flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-xs font-medium shadow-xl backdrop-blur-md animate-toast pointer-events-auto ${bgBorder}`;
+      toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 shrink-0"></i><span>${message}</span>`;
+
+      toastContainer.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.2s ease-out';
+        setTimeout(() => toast.remove(), 200);
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
