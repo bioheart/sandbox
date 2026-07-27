@@ -294,6 +294,27 @@ const authSubmitBtn = document.getElementById('authSubmitBtn');
 const authCancelBtn = document.getElementById('authCancelBtn');
 const authError = document.getElementById('authError');
 
+// HISTORY CONFIG & DOM ELEMENTS
+const MAX_HISTORY_ITEMS = 20;
+let activePreviewSnapshot = null;
+
+const historyBtn = document.getElementById('historyBtn');
+const historyBadgeCount = document.getElementById('historyBadgeCount');
+const historyModal = document.getElementById('historyModal');
+const historyModalCountBadge = document.getElementById('historyModalCountBadge');
+const historyModalSubtitle = document.getElementById('historyModalSubtitle');
+const historyListContainer = document.getElementById('historyListContainer');
+const historyCloseBtn = document.getElementById('historyCloseBtn');
+const historyCloseFooterBtn = document.getElementById('historyCloseFooterBtn');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+
+const historyPreviewModal = document.getElementById('historyPreviewModal');
+const historyPreviewTitle = document.getElementById('historyPreviewTitle');
+const historyPreviewSubtitle = document.getElementById('historyPreviewSubtitle');
+const historyPreviewBody = document.getElementById('historyPreviewBody');
+const historyPreviewCloseBtn = document.getElementById('historyPreviewCloseBtn');
+const historyPreviewRestoreBtn = document.getElementById('historyPreviewRestoreBtn');
+
 // INITIALIZATION
 async function initApp() {
   lucide.createIcons();
@@ -315,6 +336,7 @@ async function initApp() {
 
   loadSavedRules();
   loadPlatform('gemini', 'rules');
+  updateHistoryBadge();
 
   // Restore session auth if previously authenticated
   if (sessionStorage.getItem('agent_rules_auth') === 'true') {
@@ -515,6 +537,7 @@ function loadPlatform(platformKey, subtabKey = 'rules') {
   }
 
   renderMarkdown();
+  updateHistoryBadge();
 }
 
 // VIEW MODE SWITCHER (PREVIEW VS RAW)
@@ -565,6 +588,7 @@ if (saveRulesBtn) {
     if (activeDataset) {
       activeDataset.content = content;
       localStorage.setItem(`agent_rules_${currentPlatform}_${currentSubtab}`, content);
+      saveHistoryEntry(content);
       renderMarkdown();
       showToast(`Saved ${activeDataset.title}!`, 'success');
     }
@@ -582,6 +606,7 @@ if (saveDefaultBtn) {
       activeDataset.content = content;
       localStorage.setItem(`agent_rules_${currentPlatform}_${currentSubtab}`, content);
       localStorage.setItem(`agent_rules_default_${currentPlatform}_${currentSubtab}`, content);
+      saveHistoryEntry(content);
       renderMarkdown();
       showToast(`Set default baseline for ${activeDataset.title}!`, 'success');
     }
@@ -744,3 +769,283 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 200);
   }, 2500);
 }
+
+// ─── SAVED HISTORY SYSTEM (UP TO 20 SNAPSHOTS) ──────────────────
+function getHistoryKey(platform = currentPlatform, subtab = currentSubtab) {
+  return `agent_rules_history_${platform}_${subtab}`;
+}
+
+function getHistory(platform = currentPlatform, subtab = currentSubtab) {
+  try {
+    const raw = localStorage.getItem(getHistoryKey(platform, subtab));
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    console.error('Failed to parse history from localStorage', err);
+    return [];
+  }
+}
+
+function saveHistoryEntry(content, platform = currentPlatform, subtab = currentSubtab) {
+  if (!content) return;
+  
+  let list = getHistory(platform, subtab);
+  
+  // Exclude duplicate save if identical content as latest snapshot
+  if (list.length > 0 && list[0].content === content) {
+    return;
+  }
+  
+  const timestamp = new Date().toISOString();
+  const lineCount = content.split('\n').length;
+  const charCount = content.length;
+  
+  const entry = {
+    id: 'snap_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+    timestamp: timestamp,
+    content: content,
+    lineCount: lineCount,
+    charCount: charCount
+  };
+  
+  list.unshift(entry);
+  if (list.length > MAX_HISTORY_ITEMS) {
+    list = list.slice(0, MAX_HISTORY_ITEMS);
+  }
+  
+  try {
+    localStorage.setItem(getHistoryKey(platform, subtab), JSON.stringify(list));
+    updateHistoryBadge();
+  } catch (err) {
+    console.error('Failed to save history snapshot to localStorage', err);
+  }
+}
+
+function updateHistoryBadge() {
+  if (!historyBadgeCount) return;
+  const list = getHistory();
+  historyBadgeCount.textContent = list.length;
+}
+
+function formatTimestamp(isoString) {
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  } catch (e) {
+    return isoString;
+  }
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showHistoryModal() {
+  if (!historyModal) return;
+  renderHistoryModal();
+  historyModal.classList.remove('hidden');
+}
+
+function hideHistoryModal() {
+  if (!historyModal) return;
+  historyModal.classList.add('hidden');
+}
+
+function renderHistoryModal() {
+  const platformData = RULE_DATASETS[currentPlatform];
+  const activeDataset = platformData ? platformData[currentSubtab] : null;
+  const sectionTitle = activeDataset ? `${platformData.title} • ${activeDataset.title}` : `${currentPlatform} • ${currentSubtab}`;
+  
+  if (historyModalSubtitle) {
+    historyModalSubtitle.textContent = `Snapshots for ${sectionTitle}`;
+  }
+
+  const list = getHistory();
+  if (historyModalCountBadge) {
+    historyModalCountBadge.textContent = `${list.length} / ${MAX_HISTORY_ITEMS} Snapshots`;
+  }
+
+  if (!historyListContainer) return;
+  historyListContainer.innerHTML = '';
+
+  if (list.length === 0) {
+    historyListContainer.innerHTML = `
+      <div class="text-center py-12 px-4">
+        <i data-lucide="history" class="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700 mb-3"></i>
+        <p class="text-sm font-semibold text-slate-600 dark:text-slate-400">No saved history yet</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">History is automatically created (up to ${MAX_HISTORY_ITEMS} versions) whenever you click "Save" or "Set Default".</p>
+      </div>
+    `;
+    lucide.createIcons();
+    return;
+  }
+
+  list.forEach((entry, idx) => {
+    const itemEl = document.createElement('div');
+    itemEl.className = 'p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 hover:border-indigo-300 dark:hover:border-indigo-700 transition flex flex-col gap-2 group';
+    
+    const snippetLines = entry.content.split('\n').filter(l => l.trim().length > 0).slice(0, 3).join(' ');
+    const snippetText = snippetLines.length > 140 ? snippetLines.substring(0, 140) + '...' : snippetLines;
+
+    itemEl.innerHTML = `
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 text-[10px] font-bold font-mono ${idx === 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'} rounded-md">
+            ${idx === 0 ? 'LATEST' : `#${idx + 1}`}
+          </span>
+          <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+            <i data-lucide="clock" class="w-3 h-3 text-slate-400"></i>
+            ${formatTimestamp(entry.timestamp)}
+          </span>
+        </div>
+        <div class="text-[11px] font-mono text-slate-400 dark:text-slate-500 flex items-center gap-2">
+          <span>${entry.lineCount} lines</span>
+          <span>•</span>
+          <span>${entry.charCount} chars</span>
+        </div>
+      </div>
+      
+      <p class="text-xs text-slate-600 dark:text-slate-400 font-mono bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800/80 truncate">
+        ${escapeHtml(snippetText || '(Empty snapshot)')}
+      </p>
+
+      <div class="flex items-center justify-end gap-1.5 pt-1">
+        <button data-action="preview" data-index="${idx}" class="px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 rounded-lg transition flex items-center gap-1">
+          <i data-lucide="eye" class="w-3 h-3"></i> Preview
+        </button>
+        <button data-action="copy" data-index="${idx}" class="px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-neonCyan bg-indigo-50 dark:bg-indigo-950/80 hover:bg-indigo-100 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 rounded-lg transition flex items-center gap-1">
+          <i data-lucide="copy" class="w-3 h-3"></i> Copy
+        </button>
+        <button data-action="restore" data-index="${idx}" class="px-2.5 py-1 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-lg shadow-sm transition flex items-center gap-1">
+          <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Restore
+        </button>
+        <button data-action="delete" data-index="${idx}" title="Delete snapshot" class="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    `;
+
+    itemEl.querySelectorAll('button[data-action]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = btn.getAttribute('data-action');
+        const index = parseInt(btn.getAttribute('data-index'), 10);
+        handleHistoryAction(action, index);
+      });
+    });
+
+    historyListContainer.appendChild(itemEl);
+  });
+
+  lucide.createIcons();
+}
+
+function handleHistoryAction(action, index) {
+  const list = getHistory();
+  const entry = list[index];
+  if (!entry) return;
+
+  if (action === 'preview') {
+    openHistoryPreview(entry);
+  } else if (action === 'copy') {
+    navigator.clipboard.writeText(entry.content);
+    showToast('Copied history snapshot to clipboard!', 'success');
+  } else if (action === 'restore') {
+    if (confirm(`Restore snapshot from ${formatTimestamp(entry.timestamp)}?\n\nCurrent unsaved modifications will be replaced.`)) {
+      restoreHistoryEntry(entry);
+    }
+  } else if (action === 'delete') {
+    list.splice(index, 1);
+    localStorage.setItem(getHistoryKey(), JSON.stringify(list));
+    renderHistoryModal();
+    updateHistoryBadge();
+    showToast('Deleted history snapshot.', 'info');
+  }
+}
+
+function openHistoryPreview(entry) {
+  activePreviewSnapshot = entry;
+  if (!historyPreviewModal) return;
+  const platformData = RULE_DATASETS[currentPlatform];
+  const activeDataset = platformData ? platformData[currentSubtab] : null;
+  const titleStr = activeDataset ? `${platformData.title} • ${activeDataset.title}` : '';
+  
+  if (historyPreviewTitle) {
+    historyPreviewTitle.textContent = `Snapshot Preview — ${titleStr}`;
+  }
+  if (historyPreviewSubtitle) {
+    historyPreviewSubtitle.textContent = `${formatTimestamp(entry.timestamp)} • ${entry.lineCount} lines, ${entry.charCount} chars`;
+  }
+  if (historyPreviewBody) {
+    historyPreviewBody.textContent = entry.content;
+  }
+  historyPreviewModal.classList.remove('hidden');
+}
+
+function closeHistoryPreview() {
+  if (historyPreviewModal) {
+    historyPreviewModal.classList.add('hidden');
+  }
+  activePreviewSnapshot = null;
+}
+
+function restoreHistoryEntry(entry) {
+  if (!entry) return;
+
+  if (RULE_DATASETS[currentPlatform] && RULE_DATASETS[currentPlatform][currentSubtab]) {
+    RULE_DATASETS[currentPlatform][currentSubtab].content = entry.content;
+  }
+  localStorage.setItem(`agent_rules_${currentPlatform}_${currentSubtab}`, entry.content);
+  
+  if (rawTextarea) {
+    rawTextarea.value = entry.content;
+  }
+
+  renderMarkdown();
+  hideHistoryModal();
+  closeHistoryPreview();
+  showToast(`Restored version from ${formatTimestamp(entry.timestamp)}!`, 'success');
+}
+
+// EVENT LISTENERS FOR HISTORY MODALS
+if (historyBtn) {
+  historyBtn.addEventListener('click', showHistoryModal);
+}
+if (historyCloseBtn) {
+  historyCloseBtn.addEventListener('click', hideHistoryModal);
+}
+if (historyCloseFooterBtn) {
+  historyCloseFooterBtn.addEventListener('click', hideHistoryModal);
+}
+if (clearHistoryBtn) {
+  clearHistoryBtn.addEventListener('click', () => {
+    const list = getHistory();
+    if (list.length === 0) return;
+    if (confirm('Clear all saved history snapshots for this section?')) {
+      localStorage.removeItem(getHistoryKey());
+      renderHistoryModal();
+      updateHistoryBadge();
+      showToast('Cleared all history snapshots for this section.', 'info');
+    }
+  });
+}
+
+if (historyPreviewCloseBtn) {
+  historyPreviewCloseBtn.addEventListener('click', closeHistoryPreview);
+}
+if (historyPreviewRestoreBtn) {
+  historyPreviewRestoreBtn.addEventListener('click', () => {
+    if (activePreviewSnapshot) {
+      if (confirm(`Restore snapshot from ${formatTimestamp(activePreviewSnapshot.timestamp)}?`)) {
+        restoreHistoryEntry(activePreviewSnapshot);
+      }
+    }
+  });
+}
+
