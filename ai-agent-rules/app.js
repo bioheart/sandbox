@@ -251,9 +251,11 @@ let currentSubtab = 'rules'; // 'rules' or 'personalize'
 let currentViewMode = 'rendered'; // 'rendered' or 'raw'
 let isAuthenticated = false;
 
-// AUTH CONFIG — SHA-256 hash of the passcode (default: "bioheart")
-// To change passcode: run in console: crypto.subtle.digest('SHA-256', new TextEncoder().encode('YOUR_NEW_PASSCODE')).then(b => console.log([...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('')))
-const AUTH_PASSCODE_HASH = '8e1049064c2ccd119eda8418c783b98aa0fdf257660e5c9423ee070fa824c77a';
+// AUTH CONFIG — SHA-256 hash of the Admin passcode
+const AUTH_PASSCODE_HASH = '39c38f97f558c128998418ea2850ab79049edf6f88eed801a45452eb9a231151';
+
+// AES-256-GCM Encrypted Vault containing Upstash REST Credentials (Encrypted with Admin passcode hash)
+const ENCRYPTED_CLOUD_SYNC_STORE = "EfMk37iwPmgb54voLwCzOKsLya8V6J824itS7RTMyYdZYL3FG+xsI1cMJN1/6GyyXzldyhGDrLhE+AYuFwEmwhjHvW186XDhB12xJX0Udy/pnr9jtFxlIvfIrcIDdTvdiVmcZOmVQI/GwqNg+6/t6MItmMdniHpTPSgVfcTawQy5x3gMHujEmU+uUrFkpBxg0pA9/mKMKM8jH7dG/xnrlTR3d";
 
 // DOM ELEMENTS
 const tabGemini = document.getElementById('tabGemini');
@@ -456,7 +458,16 @@ if (authSubmitBtn) {
       sessionStorage.setItem('agent_rules_auth', 'true');
       hideAuthModal();
       updateAuthUI();
-      showToast('Unlocked! Admin editing enabled.', 'success');
+
+      // Attempt AES decryption of Cloud Sync credentials
+      const decrypted = await decryptCloudCredentials(input);
+      if (decrypted && decrypted.url && decrypted.token) {
+        saveCloudCredentials(decrypted.url, decrypted.token, true);
+        await pullFromCloud(true);
+        showToast('Unlocked Admin & Auto-synced Cloud DB!', 'success');
+      } else {
+        showToast('Unlocked! Admin editing enabled.', 'success');
+      }
     } else {
       if (authError) authError.classList.remove('hidden');
       if (authPasswordInput) { authPasswordInput.value = ''; authPasswordInput.focus(); }
@@ -1284,6 +1295,46 @@ if (cloudCopyLinkBtn) {
     });
   });
 }
+async function decryptCloudCredentials(passcodeHash) {
+  try {
+    if (!ENCRYPTED_CLOUD_SYNC_STORE) return null;
+    const raw = Uint8Array.from(atob(ENCRYPTED_CLOUD_SYNC_STORE), c => c.charCodeAt(0));
+    const salt = raw.slice(0, 16);
+    const iv = raw.slice(16, 28);
+    const ciphertext = raw.slice(28);
 
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(passcodeHash),
+      'PBKDF2',
+      false,
+      ['deriveKey']
+    );
 
+    const key = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: salt,
+        iterations: 100000,
+        hash: 'SHA-256'
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
 
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: iv },
+      key,
+      ciphertext
+    );
+
+    const dec = new TextDecoder();
+    return JSON.parse(dec.decode(decrypted));
+  } catch (err) {
+    console.warn('Failed to decrypt Cloud Sync store with provided passcode hash', err);
+    return null;
+  }
+}
