@@ -383,17 +383,18 @@ async function hashPasscode(passcode) {
 }
 
 function updateAuthUI() {
-  const editButtons = [saveRulesBtn, saveDefaultBtn, resetRulesBtn, exportJsonBtn, cloudSyncBtn];
+  const adminButtons = [saveRulesBtn, saveDefaultBtn, resetRulesBtn, exportJsonBtn, cloudSyncBtn, historyBtn];
 
   if (isAuthenticated) {
-    // UNLOCKED STATE
+    // UNLOCKED STATE (Admin)
     if (authLockIcon) authLockIcon.setAttribute('data-lucide', 'unlock');
     if (authStatusText) authStatusText.textContent = 'Admin';
     if (authLockBtn) {
       authLockBtn.className = 'px-3 py-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 hover:bg-emerald-200 dark:hover:bg-emerald-900 border border-emerald-300 dark:border-emerald-700/60 rounded-xl transition active:scale-95 flex items-center gap-1.5 shadow-sm';
     }
-    editButtons.forEach(btn => {
+    adminButtons.forEach(btn => {
       if (btn) {
+        btn.classList.remove('hidden');
         btn.disabled = false;
         btn.style.opacity = '1';
         btn.style.pointerEvents = 'auto';
@@ -401,17 +402,16 @@ function updateAuthUI() {
     });
     if (rawTextarea) rawTextarea.readOnly = false;
   } else {
-    // LOCKED STATE
+    // LOCKED STATE (View Only)
     if (authLockIcon) authLockIcon.setAttribute('data-lucide', 'lock');
     if (authStatusText) authStatusText.textContent = 'View Only';
     if (authLockBtn) {
       authLockBtn.className = 'px-3 py-1.5 text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 hover:bg-amber-200 dark:hover:bg-amber-900 border border-amber-300 dark:border-amber-700/60 rounded-xl transition active:scale-95 flex items-center gap-1.5 shadow-sm';
     }
-    editButtons.forEach(btn => {
+    adminButtons.forEach(btn => {
       if (btn) {
+        btn.classList.add('hidden');
         btn.disabled = true;
-        btn.style.opacity = '0.4';
-        btn.style.pointerEvents = 'none';
       }
     });
     if (rawTextarea) rawTextarea.readOnly = true;
