@@ -1185,7 +1185,7 @@ async function pushToCloud(silent = false) {
         Authorization: `Bearer ${creds.token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(JSON.stringify(exportData))
+      body: JSON.stringify(exportData)
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     if (!silent) showToast('Pushed rules to Cloud DB successfully!', 'success');
@@ -1214,7 +1214,20 @@ async function pullFromCloud(silent = false) {
       return false;
     }
 
-    let parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
+    let parsed = data.result;
+    while (typeof parsed === 'string') {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch (e) {
+        break;
+      }
+    }
+
+    if (!parsed || typeof parsed !== 'object') {
+      if (!silent) showToast('Invalid data format received from Cloud DB.', 'error');
+      return false;
+    }
+
     let count = 0;
     Object.keys(parsed).forEach(platform => {
       ['rules', 'personalize'].forEach(subtab => {
@@ -1228,6 +1241,10 @@ async function pullFromCloud(silent = false) {
     });
 
     loadPlatform(currentPlatform, currentSubtab);
+    renderMarkdown();
+    if (rawTextarea && RULE_DATASETS[currentPlatform] && RULE_DATASETS[currentPlatform][currentSubtab]) {
+      rawTextarea.value = RULE_DATASETS[currentPlatform][currentSubtab].content;
+    }
     if (!silent) showToast(`Synced ${count} rule datasets from Cloud DB!`, 'success');
     return true;
   } catch (err) {
