@@ -255,7 +255,7 @@ let isAuthenticated = false;
 const AUTH_PASSCODE_HASH = '39c38f97f558c128998418ea2850ab79049edf6f88eed801a45452eb9a231151';
 
 // AES-256-GCM Encrypted Vault containing Upstash REST Credentials (Encrypted with Admin passcode hash)
-const ENCRYPTED_CLOUD_SYNC_STORE = "EfMk37iwPmgb54voLwCzOKsLya8V6J824itS7RTMyYdZYL3FG+xsI1cMJN1/6GyyXzldyhGDrLhE+AYuFwEmwhjHvW186XDhB12xJX0Udy/pnr9jtFxlIvfIrcIDdTvdiVmcZOmVQI/GwqNg+6/t6MItmMdniHpTPSgVfcTawQy5x3gMHujEmU+uUrFkpBxg0pA9/mKMKM8jH7dG/xnrlTR3d";
+const ENCRYPTED_CLOUD_SYNC_STORE = "EfMk37iwPmgb54voLwCzOKsLya8V6J824itS7RTMyYdZYL3FG+xsI1cMJN1/6GyyXzldyhGDrLhE+AYuFwEmwhjHvW186XDhB12xJX0Udy/pnr9jtFxlIvfIrcIDdTvdiVmcZOmVQI/GwqNg+6/t6MItmMdniHpTPSgVfcTawQy5x3gMHujEmU+uUrFkpBxg0pA9/mKMKCk8+IVGKotGM8jH7dG/xnrlTR3d";
 
 // DOM ELEMENTS
 const tabGemini = document.getElementById('tabGemini');
@@ -460,7 +460,7 @@ if (authSubmitBtn) {
       updateAuthUI();
 
       // Attempt AES decryption of Cloud Sync credentials
-      const decrypted = await decryptCloudCredentials(input);
+      const decrypted = await decryptCloudCredentials(hashed);
       if (decrypted && decrypted.url && decrypted.token) {
         saveCloudCredentials(decrypted.url, decrypted.token, true);
         await pullFromCloud(true);
