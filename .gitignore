@@ -1,1 +1,7 @@
 .vercel
+.env
+.env*.local
+*.key
+*.pem
+ai-agent-rules/config.js
+!api/config.js

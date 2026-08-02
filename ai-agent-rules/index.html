@@ -143,6 +143,12 @@
         <span>JSON Store</span>
       </button>
 
+      <!-- Cloud Sync (Vercel KV / Upstash) -->
+      <button id="cloudSyncBtn" title="Configure Vercel KV / Upstash Cloud Sync" class="px-2.5 py-1.5 text-xs font-semibold text-indigo-700 dark:text-cyan-300 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 rounded-xl transition active:scale-95 flex items-center gap-1.5 shadow-sm">
+        <i data-lucide="cloud" class="w-3.5 h-3.5 text-indigo-600 dark:text-neonCyan"></i>
+        <span>Cloud Sync</span>
+      </button>
+
       <!-- Reset Defaults -->
       <button id="resetRulesBtn" title="Reset current rules to default" class="px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 rounded-xl transition active:scale-95 flex items-center gap-1">
         <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
@@ -368,9 +374,80 @@
     </div>
   </div>
 
+  <!-- CLOUD SYNC SETTINGS MODAL OVERLAY -->
+  <div id="cloudSyncModal" class="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl mx-4 flex flex-col gap-4">
+      <div class="flex items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center shrink-0">
+            <i data-lucide="cloud" class="w-5 h-5 text-indigo-600 dark:text-neonCyan"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Cloud Database Sync (Vercel KV)</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Sync rules across computers via Upstash / Vercel KV REST API</p>
+          </div>
+        </div>
+        <button id="cloudSyncCloseBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Security Guarantee Note -->
+      <div class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-2">
+        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+        <span><strong>Security Note:</strong> API URL & Token are stored strictly in your browser's local storage. They are <u>never</u> saved to project files or pushed to Git.</span>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Upstash / Vercel KV REST URL</label>
+          <input type="text" id="cloudSyncUrlInput" placeholder="https://...upstash.io" autocomplete="off"
+            class="w-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-indigo-500 dark:focus:border-neonCyan transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Upstash / Vercel KV REST Token</label>
+          <input type="password" id="cloudSyncTokenInput" placeholder="AY...=" autocomplete="off"
+            class="w-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-indigo-500 dark:focus:border-neonCyan transition">
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <input type="checkbox" id="cloudSyncAutoCheckbox" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-slate-700 dark:bg-slate-800 cursor-pointer">
+          <label for="cloudSyncAutoCheckbox" class="text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">Auto-push to Cloud DB when saving rules</label>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800 gap-2 flex-wrap">
+        <div class="flex items-center gap-2">
+          <button id="cloudTestBtn" class="px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition flex items-center gap-1.5">
+            <i data-lucide="radio" class="w-3.5 h-3.5 text-indigo-500"></i>
+            <span>Test Connection</span>
+          </button>
+          <button id="cloudCopyLinkBtn" title="Copy One-Click Setup Link for Computer B" class="px-3 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 border border-indigo-200 dark:border-indigo-800 rounded-xl transition flex items-center gap-1.5">
+            <i data-lucide="link" class="w-3.5 h-3.5"></i>
+            <span>Copy Setup Link</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="cloudPullBtn" class="px-3 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900 border border-amber-200 dark:border-amber-800 rounded-xl transition flex items-center gap-1.5">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Pull from Cloud</span>
+          </button>
+          <button id="cloudPushBtn" class="px-3.5 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-xl shadow-md transition flex items-center gap-1.5">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+            <span>Push to Cloud</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION CONTAINER -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
+  <script src="/api/config"></script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

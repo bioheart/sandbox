@@ -334,9 +334,17 @@ async function initApp() {
     console.log('Loaded built-in default rule datasets');
   }
 
+  checkUrlHashConfig();
   loadSavedRules();
   loadPlatform('gemini', 'rules');
   updateHistoryBadge();
+  updateStorageStatusText();
+
+  // Auto-pull from cloud on init if credentials are saved
+  const initCreds = getCloudCredentials();
+  if (initCreds.url && initCreds.token) {
+    pullFromCloud(true).catch(() => {});
+  }
 
   // Restore session auth if previously authenticated
   if (sessionStorage.getItem('agent_rules_auth') === 'true') {
@@ -373,7 +381,7 @@ async function hashPasscode(passcode) {
 }
 
 function updateAuthUI() {
-  const editButtons = [saveRulesBtn, saveDefaultBtn, resetRulesBtn, exportJsonBtn];
+  const editButtons = [saveRulesBtn, saveDefaultBtn, resetRulesBtn, exportJsonBtn, cloudSyncBtn];
 
   if (isAuthenticated) {
     // UNLOCKED STATE
@@ -591,6 +599,11 @@ if (saveRulesBtn) {
       saveHistoryEntry(content);
       renderMarkdown();
       showToast(`Saved ${activeDataset.title}!`, 'success');
+      
+      const creds = getCloudCredentials();
+      if (creds.autoSync && creds.url && creds.token) {
+        pushToCloud(true);
+      }
     }
   });
 }
@@ -1048,4 +1061,229 @@ if (historyPreviewRestoreBtn) {
     }
   });
 }
+
+// ─── CLOUD SYNC CONTROLLER (UPSTASH / VERCEL KV) ───────────────
+const cloudSyncBtn = document.getElementById('cloudSyncBtn');
+const cloudSyncModal = document.getElementById('cloudSyncModal');
+const cloudSyncCloseBtn = document.getElementById('cloudSyncCloseBtn');
+const cloudSyncUrlInput = document.getElementById('cloudSyncUrlInput');
+const cloudSyncTokenInput = document.getElementById('cloudSyncTokenInput');
+const cloudSyncAutoCheckbox = document.getElementById('cloudSyncAutoCheckbox');
+const cloudTestBtn = document.getElementById('cloudTestBtn');
+const cloudPushBtn = document.getElementById('cloudPushBtn');
+const cloudPullBtn = document.getElementById('cloudPullBtn');
+
+function getCloudCredentials() {
+  const defaultConfig = window.DEFAULT_CLOUD_SYNC || {};
+  const savedUrl = localStorage.getItem('cloud_sync_url');
+  const savedToken = localStorage.getItem('cloud_sync_token');
+  const savedAuto = localStorage.getItem('cloud_sync_auto');
+
+  const url = (savedUrl !== null ? savedUrl : (defaultConfig.url || '')).trim().replace(/\/$/, '');
+  const token = (savedToken !== null ? savedToken : (defaultConfig.token || '')).trim();
+  const autoSync = savedAuto !== null ? savedAuto === 'true' : true;
+
+  return { url, token, autoSync };
+}
+
+function saveCloudCredentials(url, token, autoSync) {
+  localStorage.setItem('cloud_sync_url', url.trim().replace(/\/$/, ''));
+  localStorage.setItem('cloud_sync_token', token.trim());
+  localStorage.setItem('cloud_sync_auto', autoSync ? 'true' : 'false');
+  updateStorageStatusText();
+}
+
+function updateStorageStatusText() {
+  const infoSpan = document.getElementById('storagePathText');
+  const creds = getCloudCredentials();
+  if (infoSpan) {
+    if (creds.url && creds.token) {
+      infoSpan.innerHTML = `Storage Location: <strong>Browser LocalStorage + Cloud Sync (Vercel KV)</strong> • Target File: /Users/bioheart/.gemini/config/AGENTS.md`;
+    } else {
+      infoSpan.innerHTML = `Storage Location: Browser LocalStorage • Target File: /Users/bioheart/.gemini/config/AGENTS.md`;
+    }
+  }
+}
+
+function showCloudModal() {
+  if (!isAuthenticated) {
+    showToast('Admin access required to configure Cloud Sync', 'error');
+    showAuthModal();
+    return;
+  }
+  const creds = getCloudCredentials();
+  if (cloudSyncUrlInput) cloudSyncUrlInput.value = creds.url;
+  if (cloudSyncTokenInput) cloudSyncTokenInput.value = creds.token;
+  if (cloudSyncAutoCheckbox) cloudSyncAutoCheckbox.checked = creds.autoSync;
+  if (cloudSyncModal) cloudSyncModal.classList.remove('hidden');
+}
+
+function hideCloudModal() {
+  if (cloudSyncModal) cloudSyncModal.classList.add('hidden');
+}
+
+async function testCloudConnection(silent = false) {
+  const url = (cloudSyncUrlInput ? cloudSyncUrlInput.value : '').trim().replace(/\/$/, '');
+  const token = (cloudSyncTokenInput ? cloudSyncTokenInput.value : '').trim();
+  const autoSync = cloudSyncAutoCheckbox ? cloudSyncAutoCheckbox.checked : false;
+
+  if (!url || !token) {
+    if (!silent) showToast('Please enter both Upstash REST URL and Token', 'error');
+    return false;
+  }
+
+  try {
+    const res = await fetch(`${url}/ping`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.result === 'PONG' || data.result) {
+      saveCloudCredentials(url, token, autoSync);
+      if (!silent) showToast('Connected and saved Cloud Database settings!', 'success');
+      return true;
+    }
+    throw new Error('Invalid response from server');
+  } catch (err) {
+    if (!silent) showToast(`Connection failed: ${err.message}`, 'error');
+    return false;
+  }
+}
+
+async function pushToCloud(silent = false) {
+  const creds = getCloudCredentials();
+  if (!creds.url || !creds.token) {
+    if (!silent) showToast('Cloud Sync credentials not configured', 'error');
+    return false;
+  }
+
+  const exportData = {};
+  Object.keys(RULE_DATASETS).forEach(platform => {
+    exportData[platform] = {};
+    ['rules', 'personalize'].forEach(subtab => {
+      if (RULE_DATASETS[platform] && RULE_DATASETS[platform][subtab]) {
+        exportData[platform][subtab] = RULE_DATASETS[platform][subtab].content;
+      }
+    });
+  });
+
+  try {
+    const res = await fetch(`${creds.url}/set/ai_agent_rules_store`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${creds.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(JSON.stringify(exportData))
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!silent) showToast('Pushed rules to Cloud DB successfully!', 'success');
+    return true;
+  } catch (err) {
+    if (!silent) showToast(`Cloud push failed: ${err.message}`, 'error');
+    return false;
+  }
+}
+
+async function pullFromCloud(silent = false) {
+  const creds = getCloudCredentials();
+  if (!creds.url || !creds.token) {
+    if (!silent) showToast('Cloud Sync credentials not configured', 'error');
+    return false;
+  }
+
+  try {
+    const res = await fetch(`${creds.url}/get/ai_agent_rules_store`, {
+      headers: { Authorization: `Bearer ${creds.token}` }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.result) {
+      if (!silent) showToast('No data found in Cloud DB yet.', 'info');
+      return false;
+    }
+
+    let parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
+    let count = 0;
+    Object.keys(parsed).forEach(platform => {
+      ['rules', 'personalize'].forEach(subtab => {
+        if (parsed[platform] && parsed[platform][subtab] && RULE_DATASETS[platform] && RULE_DATASETS[platform][subtab]) {
+          const content = parsed[platform][subtab];
+          RULE_DATASETS[platform][subtab].content = content;
+          localStorage.setItem(`agent_rules_${platform}_${subtab}`, content);
+          count++;
+        }
+      });
+    });
+
+    loadPlatform(currentPlatform, currentSubtab);
+    if (!silent) showToast(`Synced ${count} rule datasets from Cloud DB!`, 'success');
+    return true;
+  } catch (err) {
+    if (!silent) showToast(`Cloud pull failed: ${err.message}`, 'error');
+    return false;
+  }
+}
+
+if (cloudSyncBtn) cloudSyncBtn.addEventListener('click', showCloudModal);
+if (cloudSyncCloseBtn) cloudSyncCloseBtn.addEventListener('click', hideCloudModal);
+
+if (cloudTestBtn) {
+  cloudTestBtn.addEventListener('click', async () => {
+    await testCloudConnection(false);
+  });
+}
+
+if (cloudPushBtn) {
+  cloudPushBtn.addEventListener('click', async () => {
+    const connected = await testCloudConnection(true);
+    if (connected) {
+      await pushToCloud(false);
+      hideCloudModal();
+    }
+  });
+}
+
+function checkUrlHashConfig() {
+  if (window.location.hash && window.location.hash.includes('sync_token=')) {
+    try {
+      const hashText = window.location.hash.substring(1);
+      const params = new URLSearchParams(hashText);
+      const url = params.get('sync_url');
+      const token = params.get('sync_token');
+      if (url && token) {
+        saveCloudCredentials(url, token, true);
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+        showToast('Auto-configured Cloud Sync from Setup Link!', 'success');
+      }
+    } catch (err) {
+      console.error('Failed to parse URL hash config', err);
+    }
+  }
+}
+
+const cloudCopyLinkBtn = document.getElementById('cloudCopyLinkBtn');
+if (cloudCopyLinkBtn) {
+  cloudCopyLinkBtn.addEventListener('click', () => {
+    if (!isAuthenticated) {
+      showToast('Admin access required to copy Setup Link', 'error');
+      showAuthModal();
+      return;
+    }
+    const creds = getCloudCredentials();
+    if (!creds.url || !creds.token) {
+      showToast('Please configure and test Cloud Sync first', 'error');
+      return;
+    }
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}#sync_url=${encodeURIComponent(creds.url)}&sync_token=${encodeURIComponent(creds.token)}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      showToast('Copied One-Click Setup Link to Clipboard!', 'success');
+    }).catch(err => {
+      showToast(`Copy failed: ${err.message}`, 'error');
+    });
+  });
+}
+
+
 
